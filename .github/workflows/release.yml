@@ -22,6 +22,7 @@ jobs:
 
     permissions:
       contents: write
+      id-token: write
 
     steps:
       - name: Checkout
@@ -34,6 +35,7 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: '20'
+          registry-url: 'https://registry.npmjs.org'
           cache: 'npm'
 
       - name: Configure git
@@ -116,3 +118,8 @@ jobs:
           generate_release_notes: false
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Publish to npm
+        run: npm publish --provenance --access public
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
