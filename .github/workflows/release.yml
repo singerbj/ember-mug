@@ -85,7 +85,14 @@ jobs:
           if [ -n "$LAST_TAG" ]; then
             git log --pretty=format:"* %s (%h)" $LAST_TAG..HEAD~1 >> release_notes.md
           else
-            git log --pretty=format:"* %s (%h)" HEAD~10..HEAD~1 >> release_notes.md
+            # No previous tag - get all commits except the version bump commit
+            COMMIT_COUNT=$(git rev-list --count HEAD)
+            if [ "$COMMIT_COUNT" -gt 1 ]; then
+              # Show all commits except the version bump (HEAD~1 means up to but not including HEAD)
+              git log --pretty=format:"* %s (%h)" HEAD~1 --reverse >> release_notes.md
+            else
+              echo "* Initial release" >> release_notes.md
+            fi
           fi
           echo "" >> release_notes.md
           echo "" >> release_notes.md
