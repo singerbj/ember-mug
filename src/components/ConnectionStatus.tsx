@@ -25,9 +25,11 @@ export function ConnectionStatus({
       {error ? (
         <Box flexDirection="column" alignItems="center">
           <Text color="red">Error: {error}</Text>
-          <Text dimColor marginTop={1}>
-            Press <Text color="cyan">r</Text> to retry scanning
-          </Text>
+          <Box marginTop={1}>
+            <Text dimColor>
+              Press <Text color="cyan">r</Text> to retry scanning
+            </Text>
+          </Box>
         </Box>
       ) : isScanning ? (
         <Box flexDirection="column" alignItems="center">
@@ -43,16 +45,20 @@ export function ConnectionStatus({
               <Text> - Connecting...</Text>
             </Box>
           )}
-          <Text dimColor marginTop={1}>
-            Make sure your Ember mug is powered on and in range
-          </Text>
+          <Box marginTop={1}>
+            <Text dimColor>
+              Make sure your Ember mug is powered on and in range
+            </Text>
+          </Box>
         </Box>
       ) : (
         <Box flexDirection="column" alignItems="center">
           <Text>No Ember mug connected</Text>
-          <Text dimColor marginTop={1}>
-            Press <Text color="cyan">s</Text> to start scanning
-          </Text>
+          <Box marginTop={1}>
+            <Text dimColor>
+              Press <Text color="cyan">s</Text> to start scanning
+            </Text>
+          </Box>
         </Box>
       )}
     </Box>

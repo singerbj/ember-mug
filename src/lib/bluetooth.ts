@@ -11,6 +11,9 @@ import {
   MAX_TEMP_CELSIUS,
 } from './types.js';
 
+// Noble's state property exists but isn't properly typed
+const getNobleState = (): string => (noble as unknown as { state: string }).state;
+
 export interface BluetoothManagerEvents {
   stateChange: (state: MugState) => void;
   connected: () => void;
@@ -65,7 +68,7 @@ export class BluetoothManager extends EventEmitter {
 
   async startScanning(): Promise<void> {
     return new Promise((resolve, reject) => {
-      if (noble.state === 'poweredOn') {
+      if (getNobleState() === 'poweredOn') {
         this.emit('scanning', true);
         noble.startScanning([EMBER_SERVICE_UUID], false, (error) => {
           if (error) {
