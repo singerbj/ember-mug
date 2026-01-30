@@ -1,6 +1,6 @@
 {
   "name": "ember-mug",
-  "version": "0.3.1",
+  "version": "0.3.2",
   "description": "A CLI app for controlling Ember mugs via Bluetooth",
   "type": "module",
   "main": "dist/index.js",
