@@ -48,6 +48,11 @@ export function ConnectionStatus({
             </Text>
             <Box marginTop={1}>
               <Text color={theme.dimText}>
+                Note: Mug must be set up with the official Ember app first.
+              </Text>
+            </Box>
+            <Box marginTop={1}>
+              <Text color={theme.dimText}>
                 Press{" "}
                 <Text color="yellow" bold>
                   [r]
