@@ -24,6 +24,5 @@ export function debug(message: string, ...args: unknown[]): void {
       ).join(' ')
     : '';
 
-  // Write to stderr so it doesn't interfere with Ink's stdout rendering
-  process.stderr.write(`[${timestamp}] [DEBUG] ${message}${formattedArgs}\n`);
+  console.log(`[${timestamp}] [DEBUG] ${message}${formattedArgs}`);
 }
