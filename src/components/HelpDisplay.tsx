@@ -6,11 +6,15 @@ type TerminalTheme = (typeof TERMINAL_COLORS)[keyof typeof TERMINAL_COLORS];
 
 interface HelpDisplayProps {
   isConnected: boolean;
+  isScanning?: boolean;
+  error?: string | null;
   theme: TerminalTheme;
 }
 
 export function HelpDisplay({
   isConnected,
+  isScanning,
+  error,
   theme,
 }: HelpDisplayProps): React.ReactElement {
   const { stdout } = useStdout();
@@ -30,8 +34,12 @@ export function HelpDisplay({
           </>
         ) : (
           <>
-            <HelpKey keyChar="s" label="scan" color={theme.primary} />
-            <HelpKey keyChar="r" label="retry" color={theme.primary} />
+            {!isScanning && !error && (
+              <HelpKey keyChar="s" label="scan" color={theme.primary} />
+            )}
+            {error && (
+              <HelpKey keyChar="r" label="retry" color={theme.primary} />
+            )}
             <HelpKey keyChar="q" label="quit" color={theme.primary} />
           </>
         )}

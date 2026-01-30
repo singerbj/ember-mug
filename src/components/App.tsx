@@ -143,7 +143,7 @@ export function App(): React.ReactElement {
 
     // Only handle these if we're in main view with no active control
     if (viewMode === "main" && activeControl === "none") {
-      if (input === "s" && !mugState.connected) {
+      if (input === "s" && !mugState.connected && !isScanning) {
         startScanning();
         return;
       }
@@ -317,7 +317,12 @@ export function App(): React.ReactElement {
         </Box>
       )}
 
-      <HelpDisplay isConnected={mugState.connected} theme={theme} />
+      <HelpDisplay
+        isConnected={mugState.connected}
+        isScanning={isScanning}
+        error={error}
+        theme={theme}
+      />
     </Box>
   );
 }
