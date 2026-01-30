@@ -1,4 +1,4 @@
-import noble, { Peripheral, Characteristic } from '@abandonware/noble';
+import noble, { Peripheral, Characteristic, Service } from '@abandonware/noble';
 import { EventEmitter } from 'events';
 import {
   MugState,
@@ -61,37 +61,54 @@ export class BluetoothManager extends EventEmitter {
         this.emit('mugFound', name);
         await this.stopScanning();
         this.peripheral = peripheral;
-        try {
-          await this.connect();
-        } catch (err) {
-          this.emit('error', err instanceof Error ? err : new Error(String(err)));
-        }
+        await this.connectWithRetry();
       }
     });
   }
 
+  private async connectWithRetry(maxRetries = 3): Promise<void> {
+    let lastError: Error | null = null;
+
+    for (let attempt = 1; attempt <= maxRetries; attempt++) {
+      try {
+        await this.connect();
+        return; // Success
+      } catch (err) {
+        lastError = err instanceof Error ? err : new Error(String(err));
+
+        if (attempt < maxRetries) {
+          // Wait before retrying (exponential backoff: 1s, 2s, 4s)
+          const delay = Math.pow(2, attempt - 1) * 1000;
+          await new Promise(resolve => setTimeout(resolve, delay));
+        }
+      }
+    }
+
+    // All retries failed
+    this.emit('error', lastError || new Error('Connection failed after multiple attempts'));
+  }
+
   async startScanning(): Promise<void> {
     return new Promise((resolve, reject) => {
-      if (getNobleState() === 'poweredOn') {
+      // Scan without service UUID filter - Ember mugs don't always advertise
+      // the service UUID in their advertisement packets. We filter by name instead.
+      const startScan = () => {
         this.emit('scanning', true);
-        noble.startScanning([EMBER_SERVICE_UUID], false, (error) => {
+        noble.startScanning([], false, (error) => {
           if (error) {
             reject(error);
           } else {
             resolve();
           }
         });
+      };
+
+      if (getNobleState() === 'poweredOn') {
+        startScan();
       } else {
         noble.once('stateChange', (state) => {
           if (state === 'poweredOn') {
-            this.emit('scanning', true);
-            noble.startScanning([EMBER_SERVICE_UUID], false, (error) => {
-              if (error) {
-                reject(error);
-              } else {
-                resolve();
-              }
-            });
+            startScan();
           } else {
             reject(new Error(`Bluetooth not available: ${state}`));
           }
@@ -112,12 +129,41 @@ export class BluetoothManager extends EventEmitter {
       throw new Error('No peripheral to connect to');
     }
 
+    const CONNECTION_TIMEOUT = 10000; // 10 seconds timeout
+
     return new Promise((resolve, reject) => {
+      let timeoutId: NodeJS.Timeout | null = null;
+      let connected = false;
+
+      const cleanup = () => {
+        if (timeoutId) {
+          clearTimeout(timeoutId);
+          timeoutId = null;
+        }
+      };
+
+      timeoutId = setTimeout(() => {
+        if (!connected) {
+          cleanup();
+          // Try to cancel the connection attempt
+          try {
+            this.peripheral?.disconnect();
+          } catch {
+            // Ignore disconnect errors during timeout
+          }
+          reject(new Error('Connection timed out. Make sure your mug is nearby and awake.'));
+        }
+      }, CONNECTION_TIMEOUT);
+
       this.peripheral!.connect(async (error) => {
         if (error) {
-          reject(error);
+          cleanup();
+          reject(new Error(`Failed to connect: ${error}`));
           return;
         }
+
+        connected = true;
+        cleanup();
 
         this.isConnected = true;
         this.state.connected = true;
@@ -136,15 +182,33 @@ export class BluetoothManager extends EventEmitter {
           this.emitState();
           resolve();
         } catch (err) {
-          reject(err);
+          this.handleDisconnect();
+          reject(err instanceof Error ? err : new Error(String(err)));
         }
       });
     });
   }
 
   private async discoverCharacteristics(): Promise<void> {
+    // First discover the Ember service specifically
+    const services = await new Promise<Service[]>((resolve, reject) => {
+      this.peripheral!.discoverServices([EMBER_SERVICE_UUID], (error, services) => {
+        if (error) {
+          reject(error);
+          return;
+        }
+        resolve(services || []);
+      });
+    });
+
+    if (services.length === 0) {
+      throw new Error('Ember service not found on device');
+    }
+
+    // Then discover characteristics for that service
+    const emberService = services[0];
     return new Promise((resolve, reject) => {
-      this.peripheral!.discoverAllServicesAndCharacteristics((error, services, characteristics) => {
+      emberService.discoverCharacteristics([], (error, characteristics) => {
         if (error) {
           reject(error);
           return;
