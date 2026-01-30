@@ -61,7 +61,11 @@ export class BluetoothManager extends EventEmitter {
         this.emit('mugFound', name);
         await this.stopScanning();
         this.peripheral = peripheral;
-        await this.connect();
+        try {
+          await this.connect();
+        } catch (err) {
+          this.emit('error', err instanceof Error ? err : new Error(String(err)));
+        }
       }
     });
   }
