@@ -1,10 +1,10 @@
-import Conf from 'conf';
+import Conf from "conf";
 import {
   AppSettings,
   Preset,
   TemperatureUnit,
   DEFAULT_PRESETS,
-} from './types.js';
+} from "./types.js";
 
 interface SettingsSchema {
   presets: Preset[];
@@ -16,10 +16,10 @@ interface SettingsSchema {
 }
 
 const config = new Conf<SettingsSchema>({
-  projectName: 'ember-mug-cli',
+  projectName: "ember-mug-cli",
   defaults: {
     presets: DEFAULT_PRESETS,
-    temperatureUnit: TemperatureUnit.Celsius,
+    temperatureUnit: TemperatureUnit.Fahrenheit,
     notifyOnTemperatureReached: true,
     notifyAtBatteryPercentage: 15,
     lastTargetTemp: 55,
@@ -29,19 +29,19 @@ const config = new Conf<SettingsSchema>({
 
 export function getSettings(): AppSettings {
   return {
-    presets: config.get('presets'),
-    temperatureUnit: config.get('temperatureUnit'),
-    notifyOnTemperatureReached: config.get('notifyOnTemperatureReached'),
-    notifyAtBatteryPercentage: config.get('notifyAtBatteryPercentage'),
+    presets: config.get("presets"),
+    temperatureUnit: config.get("temperatureUnit"),
+    notifyOnTemperatureReached: config.get("notifyOnTemperatureReached"),
+    notifyAtBatteryPercentage: config.get("notifyAtBatteryPercentage"),
   };
 }
 
 export function getPresets(): Preset[] {
-  return config.get('presets');
+  return config.get("presets");
 }
 
 export function setPresets(presets: Preset[]): void {
-  config.set('presets', presets);
+  config.set("presets", presets);
 }
 
 export function addPreset(preset: Preset): void {
@@ -57,49 +57,54 @@ export function removePreset(id: string): void {
 
 export function updatePreset(id: string, updates: Partial<Preset>): void {
   const presets = getPresets().map((p) =>
-    p.id === id ? { ...p, ...updates } : p
+    p.id === id ? { ...p, ...updates } : p,
   );
   setPresets(presets);
 }
 
 export function getTemperatureUnit(): TemperatureUnit {
-  return config.get('temperatureUnit');
+  return config.get("temperatureUnit");
 }
 
 export function setTemperatureUnit(unit: TemperatureUnit): void {
-  config.set('temperatureUnit', unit);
+  config.set("temperatureUnit", unit);
 }
 
 export function getLastTargetTemp(): number {
-  return config.get('lastTargetTemp');
+  return config.get("lastTargetTemp");
 }
 
 export function setLastTargetTemp(temp: number): void {
-  config.set('lastTargetTemp', temp);
+  config.set("lastTargetTemp", temp);
 }
 
 export function getLedColor(): { r: number; g: number; b: number; a: number } {
-  return config.get('ledColor');
+  return config.get("ledColor");
 }
 
-export function setLedColor(color: { r: number; g: number; b: number; a: number }): void {
-  config.set('ledColor', color);
+export function setLedColor(color: {
+  r: number;
+  g: number;
+  b: number;
+  a: number;
+}): void {
+  config.set("ledColor", color);
 }
 
 export function getNotifyOnTemperatureReached(): boolean {
-  return config.get('notifyOnTemperatureReached');
+  return config.get("notifyOnTemperatureReached");
 }
 
 export function setNotifyOnTemperatureReached(enabled: boolean): void {
-  config.set('notifyOnTemperatureReached', enabled);
+  config.set("notifyOnTemperatureReached", enabled);
 }
 
 export function getNotifyAtBatteryPercentage(): number {
-  return config.get('notifyAtBatteryPercentage');
+  return config.get("notifyAtBatteryPercentage");
 }
 
 export function setNotifyAtBatteryPercentage(percentage: number): void {
-  config.set('notifyAtBatteryPercentage', percentage);
+  config.set("notifyAtBatteryPercentage", percentage);
 }
 
 export function resetSettings(): void {

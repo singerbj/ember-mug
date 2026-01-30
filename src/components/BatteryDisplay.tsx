@@ -1,94 +1,115 @@
-import React from 'react';
-import { Box, Text } from 'ink';
-import { LiquidState } from '../lib/types.js';
+import React from "react";
+import { Box, Text } from "ink";
+import { LiquidState } from "../lib/types.js";
 import {
   formatBatteryLevel,
-  getBatteryIcon,
   estimateBatteryLife,
   formatDuration,
-} from '../lib/utils.js';
+} from "../lib/utils.js";
+import { Panel } from "./Panel.js";
+import { TERMINAL_COLORS } from "../lib/theme.js";
+
+type TerminalTheme = (typeof TERMINAL_COLORS)[keyof typeof TERMINAL_COLORS];
 
 interface BatteryDisplayProps {
   batteryLevel: number;
   isCharging: boolean;
   liquidState: LiquidState;
+  width?: number;
+  height?: number;
+  theme: TerminalTheme;
 }
 
 export function BatteryDisplay({
   batteryLevel,
   isCharging,
   liquidState,
+  width,
+  height,
+  theme,
 }: BatteryDisplayProps): React.ReactElement {
-  const batteryColor = getBatteryColor(batteryLevel, isCharging);
-  const batteryIcon = getBatteryIcon(batteryLevel, isCharging);
-  const batteryTimeEstimate = estimateBatteryLife(batteryLevel, isCharging, liquidState);
+  const batteryTimeEstimate = estimateBatteryLife(
+    batteryLevel,
+    isCharging,
+    liquidState,
+  );
 
   return (
-    <Box flexDirection="column" marginY={1}>
-      <Box justifyContent="center">
-        <Text bold>Battery</Text>
+    <Panel
+      title="Battery"
+      titleColor={theme.primary}
+      borderColor={theme.border}
+      width={width}
+      height={height}
+    >
+      <Box justifyContent="center" marginY={1}>
+        <Text color={theme.primary} bold>
+          {formatBatteryLevel(batteryLevel)}
+        </Text>
+        {isCharging && (
+          <Text color={theme.primary} bold>
+            {" "}
+            ~
+          </Text>
+        )}
       </Box>
 
-      <Box justifyContent="center" marginY={1}>
-        <Text color={batteryColor}>
-          {batteryIcon} {formatBatteryLevel(batteryLevel)}
-          {isCharging && <Text color="yellow"> (Charging)</Text>}
-        </Text>
+      <Box justifyContent="center">
+        <BatteryBar
+          level={batteryLevel}
+          isCharging={isCharging}
+          theme={theme}
+        />
       </Box>
 
       {batteryTimeEstimate !== null && (
-        <Box justifyContent="center">
-          <Text dimColor>
+        <Box justifyContent="center" marginTop={1}>
+          <Text color={theme.dimText}>
             {isCharging ? (
               <>
-                {'Time to full: '}
-                <Text color="green">{formatDuration(batteryTimeEstimate)}</Text>
+                {"[~] "}
+                <Text color={theme.primary}>
+                  {formatDuration(batteryTimeEstimate)}
+                </Text>
+                <Text color={theme.dimText}> to full</Text>
               </>
             ) : (
               <>
-                {'Est. battery life: '}
-                <Text color={batteryLevel < 20 ? 'red' : 'yellow'}>
+                {"[~] "}
+                <Text color={theme.primary}>
                   {formatDuration(batteryTimeEstimate)}
                 </Text>
+                <Text color={theme.dimText}> remaining</Text>
               </>
             )}
           </Text>
         </Box>
       )}
-
-      <Box justifyContent="center" marginTop={1}>
-        <BatteryBar level={batteryLevel} isCharging={isCharging} />
-      </Box>
-    </Box>
+    </Panel>
   );
 }
 
 interface BatteryBarProps {
   level: number;
   isCharging: boolean;
+  theme: TerminalTheme;
 }
 
-function BatteryBar({ level, isCharging }: BatteryBarProps): React.ReactElement {
+function BatteryBar({
+  level,
+  isCharging,
+  theme,
+}: BatteryBarProps): React.ReactElement {
   const totalSegments = 20;
   const filledSegments = Math.round((level / 100) * totalSegments);
   const emptySegments = totalSegments - filledSegments;
 
-  const color = getBatteryColor(level, isCharging);
-
   return (
     <Text>
-      <Text dimColor>[</Text>
-      <Text color={color}>{'█'.repeat(filledSegments)}</Text>
-      <Text dimColor>{'░'.repeat(emptySegments)}</Text>
-      <Text dimColor>]</Text>
-      {isCharging && <Text color="yellow"> ⚡</Text>}
+      <Text color={theme.dimText}>▐</Text>
+      <Text color={theme.primary}>{"█".repeat(filledSegments)}</Text>
+      <Text color={theme.dimText}>{"░".repeat(emptySegments)}</Text>
+      <Text color={theme.dimText}>▌</Text>
     </Text>
   );
-}
-
-function getBatteryColor(level: number, isCharging: boolean): string {
-  if (isCharging) return 'yellow';
-  if (level >= 50) return 'green';
-  if (level >= 25) return 'yellow';
-  return 'red';
 }

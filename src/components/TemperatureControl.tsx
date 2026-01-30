@@ -1,13 +1,24 @@
-import React from 'react';
-import { Box, Text, useInput } from 'ink';
-import { TemperatureUnit, MIN_TEMP_CELSIUS, MAX_TEMP_CELSIUS } from '../lib/types.js';
-import { formatTemperature, clampTemperature } from '../lib/utils.js';
+import React from "react";
+import { Box, Text, useInput } from "ink";
+import {
+  TemperatureUnit,
+  MIN_TEMP_CELSIUS,
+  MAX_TEMP_CELSIUS,
+} from "../lib/types.js";
+import { formatTemperature, clampTemperature } from "../lib/utils.js";
+import { Panel } from "./Panel.js";
+import { TERMINAL_COLORS } from "../lib/theme.js";
+
+type TerminalTheme = (typeof TERMINAL_COLORS)[keyof typeof TERMINAL_COLORS];
 
 interface TemperatureControlProps {
   targetTemp: number;
   temperatureUnit: TemperatureUnit;
   onTempChange: (temp: number) => void;
   isActive: boolean;
+  width?: number;
+  height?: number;
+  theme: TerminalTheme;
 }
 
 export function TemperatureControl({
@@ -15,6 +26,9 @@ export function TemperatureControl({
   temperatureUnit,
   onTempChange,
   isActive,
+  width,
+  height,
+  theme,
 }: TemperatureControlProps): React.ReactElement {
   useInput(
     (input, key) => {
@@ -22,14 +36,10 @@ export function TemperatureControl({
 
       let delta = 0;
 
-      if (key.leftArrow || input === 'h' || input === '-') {
+      if (key.leftArrow) {
         delta = -0.5;
-      } else if (key.rightArrow || input === 'l' || input === '+' || input === '=') {
+      } else if (key.rightArrow) {
         delta = 0.5;
-      } else if (key.upArrow || input === 'k') {
-        delta = 1;
-      } else if (key.downArrow || input === 'j') {
-        delta = -1;
       }
 
       if (delta !== 0) {
@@ -37,44 +47,40 @@ export function TemperatureControl({
         onTempChange(newTemp);
       }
     },
-    { isActive }
+    { isActive },
   );
 
   const minTempDisplay = formatTemperature(MIN_TEMP_CELSIUS, temperatureUnit);
   const maxTempDisplay = formatTemperature(MAX_TEMP_CELSIUS, temperatureUnit);
 
   return (
-    <Box flexDirection="column" marginY={1}>
-      <Box justifyContent="center">
-        <Text bold>Adjust Temperature</Text>
-      </Box>
-
+    <Panel
+      title="Temperature Adjust"
+      titleColor={theme.primary}
+      borderColor={theme.border}
+      width={width}
+      height={height}
+    >
       <Box justifyContent="center" marginY={1}>
-        <Text dimColor>{minTempDisplay}</Text>
+        <Text color={theme.dimText}>{minTempDisplay}</Text>
         <Text> </Text>
         <TemperatureSlider
           value={targetTemp}
           min={MIN_TEMP_CELSIUS}
           max={MAX_TEMP_CELSIUS}
           isActive={isActive}
+          theme={theme}
         />
         <Text> </Text>
-        <Text dimColor>{maxTempDisplay}</Text>
+        <Text color={theme.dimText}>{maxTempDisplay}</Text>
       </Box>
 
       <Box justifyContent="center">
-        <Text dimColor>
-          {isActive ? (
-            <Text>
-              Use <Text color="cyan">←/→</Text> or <Text color="cyan">h/l</Text> (±0.5°) |{' '}
-              <Text color="cyan">↑/↓</Text> or <Text color="cyan">j/k</Text> (±1°)
-            </Text>
-          ) : (
-            <Text>Press <Text color="cyan">t</Text> to adjust temperature</Text>
-          )}
+        <Text color={theme.dimText}>
+          <Text color={theme.primary}>←/→</Text>
         </Text>
       </Box>
-    </Box>
+    </Panel>
   );
 }
 
@@ -83,6 +89,7 @@ interface TemperatureSliderProps {
   min: number;
   max: number;
   isActive: boolean;
+  theme: TerminalTheme;
 }
 
 function TemperatureSlider({
@@ -90,17 +97,22 @@ function TemperatureSlider({
   min,
   max,
   isActive,
+  theme,
 }: TemperatureSliderProps): React.ReactElement {
-  const totalWidth = 20;
+  const totalWidth = 16;
   const normalizedValue = (value - min) / (max - min);
   const position = Math.round(normalizedValue * (totalWidth - 1));
 
-  const sliderChars = Array(totalWidth).fill('─');
-  sliderChars[position] = '●';
+  const leftPart = "━".repeat(position);
+  const rightPart = "━".repeat(totalWidth - position - 1);
 
   return (
-    <Text color={isActive ? 'cyan' : 'white'}>
-      {sliderChars.join('')}
+    <Text>
+      <Text color={isActive ? theme.primary : theme.dimText}>{leftPart}</Text>
+      <Text color={theme.text} bold>
+        ◉
+      </Text>
+      <Text color={theme.dimText}>{rightPart}</Text>
     </Text>
   );
 }

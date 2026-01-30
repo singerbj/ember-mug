@@ -6,7 +6,7 @@ import {
   BATTERY_DRAIN_RATE_HEATING,
   BATTERY_DRAIN_RATE_MAINTAINING,
   BATTERY_CHARGE_RATE,
-} from './types.js';
+} from "./types.js";
 
 export function formatTemperature(temp: number, unit: TemperatureUnit): string {
   if (unit === TemperatureUnit.Celsius) {
@@ -25,51 +25,34 @@ export function fahrenheitToCelsius(fahrenheit: number): number {
 }
 
 export function formatBatteryLevel(level: number): string {
-  return `${level}%`;
+  return `${Math.round(level)}%`;
 }
 
 export function getBatteryIcon(level: number, isCharging: boolean): string {
   if (isCharging) {
-    return '⚡';
+    return "~";
   }
-  if (level >= 75) return '████';
-  if (level >= 50) return '███░';
-  if (level >= 25) return '██░░';
-  if (level >= 10) return '█░░░';
-  return '░░░░';
+  if (level >= 75) return "||||";
+  if (level >= 50) return "|||.";
+  if (level >= 25) return "||..";
+  if (level >= 10) return "|...";
+  return "....";
 }
 
 export function getLiquidStateText(state: LiquidState): string {
   switch (state) {
     case LiquidState.Empty:
-      return 'Empty';
+      return "Empty";
     case LiquidState.Filling:
-      return 'Filling';
+      return "Filling";
     case LiquidState.Cooling:
-      return 'Cooling';
+      return "Cooling";
     case LiquidState.Heating:
-      return 'Heating';
+      return "Heating";
     case LiquidState.StableTemperature:
-      return 'Perfect';
+      return "Perfect Temperature";
     default:
-      return 'Unknown';
-  }
-}
-
-export function getLiquidStateIcon(state: LiquidState): string {
-  switch (state) {
-    case LiquidState.Empty:
-      return '○';
-    case LiquidState.Filling:
-      return '◐';
-    case LiquidState.Cooling:
-      return '❄';
-    case LiquidState.Heating:
-      return '🔥';
-    case LiquidState.StableTemperature:
-      return '✓';
-    default:
-      return '?';
+      return "Unknown";
   }
 }
 
@@ -79,7 +62,7 @@ export function clampTemperature(temp: number): number {
 
 export function formatDuration(minutes: number): string {
   if (minutes < 1) {
-    return '< 1 min';
+    return "< 1 min";
   }
   if (minutes < 60) {
     return `${Math.round(minutes)} min`;
@@ -95,7 +78,7 @@ export function formatDuration(minutes: number): string {
 export function estimateTimeToTargetTemp(
   currentTemp: number,
   targetTemp: number,
-  liquidState: LiquidState
+  liquidState: LiquidState,
 ): number | null {
   if (liquidState === LiquidState.Empty) {
     return null;
@@ -119,7 +102,7 @@ export function estimateTimeToTargetTemp(
 export function estimateBatteryLife(
   batteryLevel: number,
   isCharging: boolean,
-  liquidState: LiquidState
+  liquidState: LiquidState,
 ): number | null {
   if (isCharging) {
     // Estimate time to full charge
@@ -151,23 +134,23 @@ export function estimateBatteryLife(
 
 export function getTemperatureColor(
   currentTemp: number,
-  targetTemp: number
+  targetTemp: number,
 ): string {
   const diff = currentTemp - targetTemp;
 
   if (Math.abs(diff) < 1) {
-    return 'green'; // At target
+    return "green"; // At target
   }
   if (diff > 0) {
-    return 'red'; // Too hot
+    return "red"; // Too hot
   }
-  return 'blue'; // Too cold
+  return "blue"; // Too cold
 }
 
 export function interpolateColor(
   value: number,
   minColor: [number, number, number],
-  maxColor: [number, number, number]
+  maxColor: [number, number, number],
 ): [number, number, number] {
   const clampedValue = Math.max(0, Math.min(1, value));
   return [
@@ -178,10 +161,12 @@ export function interpolateColor(
 }
 
 export function rgbToHex(r: number, g: number, b: number): string {
-  return `#${[r, g, b].map((c) => c.toString(16).padStart(2, '0')).join('')}`;
+  return `#${[r, g, b].map((c) => c.toString(16).padStart(2, "0")).join("")}`;
 }
 
-export function hexToRgb(hex: string): { r: number; g: number; b: number } | null {
+export function hexToRgb(
+  hex: string,
+): { r: number; g: number; b: number } | null {
   const result = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex);
   return result
     ? {

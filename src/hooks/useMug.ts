@@ -1,6 +1,11 @@
-import { useState, useEffect, useCallback } from 'react';
-import { getBluetoothManager } from '../lib/bluetooth.js';
-import { MugState, LiquidState, TemperatureUnit, RGBColor } from '../lib/types.js';
+import { useState, useEffect, useCallback } from "react";
+import { getBluetoothManager } from "../lib/bluetooth.js";
+import {
+  MugState,
+  LiquidState,
+  TemperatureUnit,
+  RGBColor,
+} from "../lib/types.js";
 
 interface UseMugReturn {
   state: MugState;
@@ -23,12 +28,12 @@ const initialState: MugState = {
   liquidState: LiquidState.Empty,
   temperatureUnit: TemperatureUnit.Celsius,
   color: { r: 255, g: 147, b: 41, a: 255 },
-  mugName: '',
+  mugName: "",
 };
 
 export function useMug(): UseMugReturn {
   const [state, setState] = useState<MugState>(initialState);
-  const [isScanning, setIsScanning] = useState(false);
+  const [isScanning, setIsScanning] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [foundMugName, setFoundMugName] = useState<string | null>(null);
 
@@ -59,20 +64,20 @@ export function useMug(): UseMugReturn {
       setFoundMugName(null);
     };
 
-    manager.on('stateChange', handleStateChange);
-    manager.on('scanning', handleScanning);
-    manager.on('error', handleError);
-    manager.on('mugFound', handleMugFound);
-    manager.on('connected', handleConnected);
-    manager.on('disconnected', handleDisconnected);
+    manager.on("stateChange", handleStateChange);
+    manager.on("scanning", handleScanning);
+    manager.on("error", handleError);
+    manager.on("mugFound", handleMugFound);
+    manager.on("connected", handleConnected);
+    manager.on("disconnected", handleDisconnected);
 
     return () => {
-      manager.off('stateChange', handleStateChange);
-      manager.off('scanning', handleScanning);
-      manager.off('error', handleError);
-      manager.off('mugFound', handleMugFound);
-      manager.off('connected', handleConnected);
-      manager.off('disconnected', handleDisconnected);
+      manager.off("stateChange", handleStateChange);
+      manager.off("scanning", handleScanning);
+      manager.off("error", handleError);
+      manager.off("mugFound", handleMugFound);
+      manager.off("connected", handleConnected);
+      manager.off("disconnected", handleDisconnected);
     };
   }, []);
 
@@ -82,7 +87,7 @@ export function useMug(): UseMugReturn {
     try {
       await manager.startScanning();
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to start scanning');
+      setError(err instanceof Error ? err.message : "Failed to start scanning");
     }
   }, []);
 
@@ -91,7 +96,9 @@ export function useMug(): UseMugReturn {
     try {
       await manager.setTargetTemp(temp);
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to set temperature');
+      setError(
+        err instanceof Error ? err.message : "Failed to set temperature",
+      );
     }
   }, []);
 
@@ -100,7 +107,9 @@ export function useMug(): UseMugReturn {
     try {
       await manager.setTemperatureUnit(unit);
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to set temperature unit');
+      setError(
+        err instanceof Error ? err.message : "Failed to set temperature unit",
+      );
     }
   }, []);
 
@@ -109,7 +118,7 @@ export function useMug(): UseMugReturn {
     try {
       await manager.setLedColor(color);
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to set LED color');
+      setError(err instanceof Error ? err.message : "Failed to set LED color");
     }
   }, []);
 
@@ -118,7 +127,7 @@ export function useMug(): UseMugReturn {
     try {
       await manager.disconnect();
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to disconnect');
+      setError(err instanceof Error ? err.message : "Failed to disconnect");
     }
   }, []);
 

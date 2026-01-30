@@ -33,7 +33,6 @@ export interface RGBColor {
 export interface Preset {
   id: string;
   name: string;
-  icon: string;
   temperature: number;
 }
 
@@ -45,22 +44,22 @@ export interface AppSettings {
 }
 
 export const DEFAULT_PRESETS: Preset[] = [
-  { id: '1', name: 'Latte', icon: '☕', temperature: 52.0 },
-  { id: '2', name: 'Coffee', icon: '🍵', temperature: 55.0 },
-  { id: '3', name: 'Tea', icon: '🍃', temperature: 60.0 },
+  { id: "1", name: "Latte", temperature: 52.0 },
+  { id: "2", name: "Coffee", temperature: 55.56 },
+  { id: "3", name: "Tea", temperature: 60.0 },
 ];
 
-export const EMBER_SERVICE_UUID = 'fc543622236c4c948fa9944a3e5353fa';
+export const EMBER_SERVICE_UUID = "fc543622236c4c948fa9944a3e5353fa";
 
 export const EMBER_CHARACTERISTICS = {
-  MUG_NAME: 'fc540001236c4c948fa9944a3e5353fa',
-  CURRENT_TEMP: 'fc540002236c4c948fa9944a3e5353fa',
-  TARGET_TEMP: 'fc540003236c4c948fa9944a3e5353fa',
-  TEMP_UNIT: 'fc540004236c4c948fa9944a3e5353fa',
-  BATTERY: 'fc540007236c4c948fa9944a3e5353fa',
-  LIQUID_STATE: 'fc540008236c4c948fa9944a3e5353fa',
-  PUSH_EVENTS: 'fc540012236c4c948fa9944a3e5353fa',
-  LED_COLOR: 'fc540014236c4c948fa9944a3e5353fa',
+  MUG_NAME: "fc540001236c4c948fa9944a3e5353fa",
+  CURRENT_TEMP: "fc540002236c4c948fa9944a3e5353fa",
+  TARGET_TEMP: "fc540003236c4c948fa9944a3e5353fa",
+  TEMP_UNIT: "fc540004236c4c948fa9944a3e5353fa",
+  BATTERY: "fc540007236c4c948fa9944a3e5353fa",
+  LIQUID_STATE: "fc540008236c4c948fa9944a3e5353fa",
+  PUSH_EVENTS: "fc540012236c4c948fa9944a3e5353fa",
+  LED_COLOR: "fc540014236c4c948fa9944a3e5353fa",
 } as const;
 
 export const MIN_TEMP_CELSIUS = 50;

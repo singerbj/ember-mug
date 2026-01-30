@@ -374,9 +374,19 @@ export class BluetoothManager extends EventEmitter {
 // Singleton instance
 let instance: BluetoothManager | null = null;
 
+// Check if mock mode is enabled
+export function isMockMode(): boolean {
+  return process.env.EMBER_MOCK === 'true' || process.env.EMBER_MOCK === '1';
+}
+
 export function getBluetoothManager(): BluetoothManager {
   if (!instance) {
     instance = new BluetoothManager();
   }
   return instance;
+}
+
+// Set a custom manager (used for mock mode)
+export function setBluetoothManager(manager: BluetoothManager): void {
+  instance = manager;
 }

@@ -1,19 +1,25 @@
-import React from 'react';
-import { Box, Text } from 'ink';
-import { LiquidState, TemperatureUnit } from '../lib/types.js';
+import React from "react";
+import { Box, Text } from "ink";
+import { LiquidState, TemperatureUnit } from "../lib/types.js";
 import {
   formatTemperature,
   getLiquidStateText,
-  getLiquidStateIcon,
   estimateTimeToTargetTemp,
   formatDuration,
-} from '../lib/utils.js';
+} from "../lib/utils.js";
+import { Panel } from "./Panel.js";
+import { TERMINAL_COLORS } from "../lib/theme.js";
+
+type TerminalTheme = (typeof TERMINAL_COLORS)[keyof typeof TERMINAL_COLORS];
 
 interface TemperatureDisplayProps {
   currentTemp: number;
   targetTemp: number;
   liquidState: LiquidState;
   temperatureUnit: TemperatureUnit;
+  width?: number;
+  height?: number;
+  theme: TerminalTheme;
 }
 
 export function TemperatureDisplay({
@@ -21,90 +27,90 @@ export function TemperatureDisplay({
   targetTemp,
   liquidState,
   temperatureUnit,
+  width,
+  height,
+  theme,
 }: TemperatureDisplayProps): React.ReactElement {
   const isEmpty = liquidState === LiquidState.Empty;
   const isAtTarget = Math.abs(currentTemp - targetTemp) < 0.5 && !isEmpty;
 
-  const tempDiff = currentTemp - targetTemp;
-  let tempColor: string;
-  if (isEmpty) {
-    tempColor = 'gray';
-  } else if (Math.abs(tempDiff) < 1) {
-    tempColor = 'green';
-  } else if (tempDiff > 0) {
-    tempColor = 'red';
-  } else {
-    tempColor = 'blue';
-  }
-
-  const timeToTarget = estimateTimeToTargetTemp(currentTemp, targetTemp, liquidState);
+  const timeToTarget = estimateTimeToTargetTemp(
+    currentTemp,
+    targetTemp,
+    liquidState,
+  );
 
   return (
-    <Box flexDirection="column" marginY={1}>
+    <Panel
+      title="Temperature"
+      titleColor={theme.primary}
+      borderColor={theme.border}
+      width={width}
+      height={height}
+    >
+      <Box marginY={1} justifyContent="center" width="100%">
+        <Box
+          flexDirection="column"
+          alignItems="center"
+          minWidth={16}
+          flexShrink={0}
+        >
+          <Box>
+            <Text color={theme.dimText}>Current</Text>
+          </Box>
+          <Box>
+            <Text bold color={theme.primary}>
+              {isEmpty
+                ? "---"
+                : formatTemperature(currentTemp, temperatureUnit)}
+            </Text>
+          </Box>
+        </Box>
+
+        <Box marginX={2} justifyContent="center" alignItems="center">
+          <Text color={theme.primary} bold>
+            {"-->"}
+          </Text>
+        </Box>
+
+        <Box
+          flexDirection="column"
+          alignItems="center"
+          minWidth={16}
+          flexShrink={0}
+        >
+          <Box>
+            <Text color={theme.dimText}>Target</Text>
+          </Box>
+          <Box>
+            <Text bold color={theme.text}>
+              {formatTemperature(targetTemp, temperatureUnit)}
+            </Text>
+          </Box>
+        </Box>
+      </Box>
+
       <Box justifyContent="center">
-        <Text bold>Temperature</Text>
-      </Box>
-
-      <Box marginY={1} justifyContent="center">
-        <Box flexDirection="column" alignItems="center">
-          <Text dimColor>Current</Text>
-          <Text bold color={tempColor}>
-            {isEmpty ? '---' : formatTemperature(currentTemp, temperatureUnit)}
-          </Text>
-        </Box>
-
-        <Box marginX={3}>
-          <Text dimColor>{'  →  '}</Text>
-        </Box>
-
-        <Box flexDirection="column" alignItems="center">
-          <Text dimColor>Target</Text>
-          <Text bold color="cyan">
-            {formatTemperature(targetTemp, temperatureUnit)}
-          </Text>
-        </Box>
-      </Box>
-
-      <Box justifyContent="center" marginTop={1}>
         <Text>
-          <Text color={getStateColor(liquidState)}>
-            {getLiquidStateIcon(liquidState)} {getLiquidStateText(liquidState)}
+          <Text color={theme.primary} bold>
+            {getLiquidStateText(liquidState)}
           </Text>
-          {isAtTarget && <Text color="green"> - Perfect!</Text>}
+          {isAtTarget && (
+            <Text color={theme.primary} bold>
+              {" "}
+              *
+            </Text>
+          )}
+
+          {timeToTarget !== null && timeToTarget > 0 && (
+            <Text color={theme.dimText}>
+              {"  •  [~] "}
+              <Text color={theme.primary}>{formatDuration(timeToTarget)}</Text>
+              <Text color={theme.dimText}> to target</Text>
+            </Text>
+          )}
         </Text>
       </Box>
-
-      {timeToTarget !== null && timeToTarget > 0 && (
-        <Box justifyContent="center" marginTop={1}>
-          <Text dimColor>
-            {'Est. time to target: '}
-            <Text color="yellow">{formatDuration(timeToTarget)}</Text>
-          </Text>
-        </Box>
-      )}
-
-      {timeToTarget === 0 && !isEmpty && (
-        <Box justifyContent="center" marginTop={1}>
-          <Text color="green">At target temperature!</Text>
-        </Box>
-      )}
-    </Box>
+    </Panel>
   );
-}
-
-function getStateColor(state: LiquidState): string {
-  switch (state) {
-    case LiquidState.Empty:
-      return 'gray';
-    case LiquidState.Filling:
-      return 'cyan';
-    case LiquidState.Cooling:
-      return 'blue';
-    case LiquidState.Heating:
-      return 'red';
-    case LiquidState.StableTemperature:
-      return 'green';
-    default:
-      return 'white';
-  }
 }

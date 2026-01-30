@@ -1,28 +1,41 @@
-import React, { useState, useEffect, useCallback } from 'react';
-import { Box, Text, useApp, useInput } from 'ink';
-import { useMug } from '../hooks/useMug.js';
-import { Header } from './Header.js';
-import { TemperatureDisplay } from './TemperatureDisplay.js';
-import { BatteryDisplay } from './BatteryDisplay.js';
-import { TemperatureControl } from './TemperatureControl.js';
-import { Presets } from './Presets.js';
-import { ColorControl } from './ColorControl.js';
-import { ConnectionStatus } from './ConnectionStatus.js';
-import { SettingsView } from './SettingsView.js';
-import { HelpDisplay } from './HelpDisplay.js';
-import { TemperatureUnit, Preset, RGBColor } from '../lib/types.js';
+import React, { useState, useEffect, useCallback } from "react";
+import { Box, Text, useApp, useInput, useStdout } from "ink";
+import { useMug } from "../hooks/useMug.js";
+import { Header } from "./Header.js";
+import { TemperatureDisplay } from "./TemperatureDisplay.js";
+import { BatteryDisplay } from "./BatteryDisplay.js";
+import { TemperatureControl } from "./TemperatureControl.js";
+import { Presets } from "./Presets.js";
+import { ConnectionStatus } from "./ConnectionStatus.js";
+import { SettingsView } from "./SettingsView.js";
+import { HelpDisplay } from "./HelpDisplay.js";
+import { TemperatureUnit, Preset, RGBColor } from "../lib/types.js";
 import {
   getPresets,
   getTemperatureUnit,
   setTemperatureUnit as saveTemperatureUnit,
   setLastTargetTemp,
-} from '../lib/settings.js';
+  updatePreset,
+} from "../lib/settings.js";
+import { getThemeForState, getTerminalTheme, ThemeKey } from "../lib/theme.js";
 
-type ViewMode = 'main' | 'settings' | 'color';
-type ActiveControl = 'none' | 'temperature' | 'color';
+type ViewMode = "main" | "settings";
+type ActiveControl = "none" | "temperature";
 
 export function App(): React.ReactElement {
   const { exit } = useApp();
+  const { stdout } = useStdout();
+  const terminalWidth = stdout?.columns || 80;
+
+  // Responsive layout: stack vertically on narrow terminals, 2x2 grid on wide
+  const isNarrowTerminal = terminalWidth < 80;
+
+  // Calculate panel widths: 1/4 screen each in 2x2 grid (accounts for gaps)
+  // For a 2x2 grid with gap of 2 between panels, each panel is (width - 6) / 2
+  const panelWidth = isNarrowTerminal
+    ? terminalWidth - 4 // Full width minus margins for stacked layout
+    : Math.floor((terminalWidth - 6) / 2); // Half width minus gaps for 2x2 grid
+
   const {
     state: mugState,
     isScanning,
@@ -34,11 +47,16 @@ export function App(): React.ReactElement {
     setLedColor,
   } = useMug();
 
-  const [viewMode, setViewMode] = useState<ViewMode>('main');
-  const [activeControl, setActiveControl] = useState<ActiveControl>('none');
-  const [presets] = useState<Preset[]>(getPresets());
+  // Get theme based on mug state
+  const themeKey = getThemeForState(mugState.liquidState, mugState.connected);
+  const theme = getTerminalTheme(themeKey);
+
+  const [viewMode, setViewMode] = useState<ViewMode>("main");
+  const [activeControl, setActiveControl] = useState<ActiveControl>("none");
+  const [presets, setPresets] = useState<Preset[]>(getPresets());
   const [selectedPresetIndex, setSelectedPresetIndex] = useState(-1);
-  const [localTempUnit, setLocalTempUnit] = useState<TemperatureUnit>(getTemperatureUnit());
+  const [localTempUnit, setLocalTempUnit] =
+    useState<TemperatureUnit>(getTemperatureUnit());
 
   // Start scanning on mount
   useEffect(() => {
@@ -46,11 +64,17 @@ export function App(): React.ReactElement {
   }, [startScanning]);
 
   // Sync temperature unit with mug when connected
+  // Priority: Local settings > Mug settings
   useEffect(() => {
-    if (mugState.connected) {
-      setLocalTempUnit(mugState.temperatureUnit);
+    if (mugState.connected && mugState.temperatureUnit !== localTempUnit) {
+      setMugTempUnit(localTempUnit);
     }
-  }, [mugState.connected, mugState.temperatureUnit]);
+  }, [
+    mugState.connected,
+    mugState.temperatureUnit,
+    localTempUnit,
+    setMugTempUnit,
+  ]);
 
   const handleTempChange = useCallback(
     async (temp: number) => {
@@ -58,7 +82,7 @@ export function App(): React.ReactElement {
       setLastTargetTemp(temp);
       setSelectedPresetIndex(-1);
     },
-    [setTargetTemp]
+    [setTargetTemp],
   );
 
   const handlePresetSelect = useCallback(
@@ -68,14 +92,14 @@ export function App(): React.ReactElement {
       const index = presets.findIndex((p) => p.id === preset.id);
       setSelectedPresetIndex(index);
     },
-    [setTargetTemp, presets]
+    [setTargetTemp, presets],
   );
 
   const handleColorChange = useCallback(
     async (color: RGBColor) => {
       await setLedColor(color);
     },
-    [setLedColor]
+    [setLedColor],
   );
 
   const handleTemperatureUnitChange = useCallback(
@@ -86,55 +110,56 @@ export function App(): React.ReactElement {
         await setMugTempUnit(unit);
       }
     },
-    [mugState.connected, setMugTempUnit]
+    [mugState.connected, setMugTempUnit],
   );
+
+  const handlePresetUpdate = useCallback((preset: Preset) => {
+    // Update local state
+    setPresets((currentPresets) =>
+      currentPresets.map((p) => (p.id === preset.id ? preset : p)),
+    );
+    // Persist to settings
+    updatePreset(preset.id, preset);
+  }, []);
 
   useInput((input, key) => {
     // Global controls
-    if (input === 'q' && viewMode === 'main' && activeControl === 'none') {
+    if (input === "q" && viewMode === "main" && activeControl === "none") {
       exit();
       return;
     }
 
     // Handle escape to go back
     if (key.escape) {
-      if (activeControl !== 'none') {
-        setActiveControl('none');
-      } else if (viewMode !== 'main') {
-        setViewMode('main');
+      if (activeControl !== "none") {
+        setActiveControl("none");
+      } else if (viewMode !== "main") {
+        setViewMode("main");
       }
       return;
     }
 
     // Only handle these if we're in main view with no active control
-    if (viewMode === 'main' && activeControl === 'none') {
-      if (input === 's' && !mugState.connected) {
+    if (viewMode === "main" && activeControl === "none") {
+      if (input === "s" && !mugState.connected) {
         startScanning();
         return;
       }
 
-      if (input === 'r' && !mugState.connected && error) {
+      if (input === "r" && !mugState.connected && error) {
         startScanning();
         return;
       }
 
       if (mugState.connected) {
-        if (input === 't') {
-          setActiveControl('temperature');
+        // 'c' hotkey removed
+
+        if (input === "o") {
+          setViewMode("settings");
           return;
         }
 
-        if (input === 'c') {
-          setActiveControl('color');
-          return;
-        }
-
-        if (input === 'o') {
-          setViewMode('settings');
-          return;
-        }
-
-        if (input === 'u') {
+        if (input === "u") {
           const newUnit =
             localTempUnit === TemperatureUnit.Celsius
               ? TemperatureUnit.Fahrenheit
@@ -144,31 +169,28 @@ export function App(): React.ReactElement {
         }
       }
     }
-
-    // Exit temperature control mode
-    if (activeControl === 'temperature' && (key.return || input === 't')) {
-      setActiveControl('none');
-      return;
-    }
-
-    // Exit color control mode
-    if (activeControl === 'color' && input === 'c') {
-      setActiveControl('none');
-      return;
-    }
   });
 
   // Settings view
-  if (viewMode === 'settings') {
+  if (viewMode === "settings") {
     return (
       <Box flexDirection="column">
-        <Header mugName={mugState.mugName} connected={mugState.connected} />
+        <Header
+          mugName={mugState.mugName}
+          connected={mugState.connected}
+          theme={theme}
+          ledColor={mugState.color}
+        />
         <SettingsView
           presets={presets}
           temperatureUnit={localTempUnit}
+          ledColor={mugState.color}
           onTemperatureUnitChange={handleTemperatureUnitChange}
-          onClose={() => setViewMode('main')}
+          onPresetUpdate={handlePresetUpdate}
+          onColorChange={handleColorChange}
+          onClose={() => setViewMode("main")}
           isActive={true}
+          theme={theme}
         />
       </Box>
     );
@@ -177,7 +199,12 @@ export function App(): React.ReactElement {
   // Main view
   return (
     <Box flexDirection="column">
-      <Header mugName={mugState.mugName} connected={mugState.connected} />
+      <Header
+        mugName={mugState.mugName}
+        connected={mugState.connected}
+        theme={theme}
+        ledColor={mugState.color}
+      />
 
       {!mugState.connected ? (
         <ConnectionStatus
@@ -186,54 +213,105 @@ export function App(): React.ReactElement {
           foundMugName={foundMugName}
           error={error}
           onRetry={startScanning}
+          width={panelWidth}
+          theme={theme}
         />
       ) : (
         <Box flexDirection="column">
-          <Box>
-            <Box flexDirection="column" flexGrow={1}>
+          {isNarrowTerminal ? (
+            /* Narrow terminal: stack all panels vertically */
+            <>
               <TemperatureDisplay
                 currentTemp={mugState.currentTemp}
                 targetTemp={mugState.targetTemp}
                 liquidState={mugState.liquidState}
                 temperatureUnit={localTempUnit}
+                width={panelWidth}
+                theme={theme}
               />
-            </Box>
+              <Box marginTop={1}>
+                <BatteryDisplay
+                  batteryLevel={mugState.batteryLevel}
+                  isCharging={mugState.isCharging}
+                  liquidState={mugState.liquidState}
+                  width={panelWidth}
+                  theme={theme}
+                />
+              </Box>
+              <Box marginTop={1}>
+                <TemperatureControl
+                  targetTemp={mugState.targetTemp}
+                  temperatureUnit={localTempUnit}
+                  onTempChange={handleTempChange}
+                  isActive={true}
+                  width={panelWidth}
+                  theme={theme}
+                />
+              </Box>
+              <Box marginTop={1}>
+                <Presets
+                  presets={presets}
+                  selectedIndex={selectedPresetIndex}
+                  temperatureUnit={localTempUnit}
+                  onSelect={handlePresetSelect}
+                  isActive={activeControl === "none"}
+                  width={panelWidth}
+                  theme={theme}
+                />
+              </Box>
+            </>
+          ) : (
+            /* Wide terminal: 2x2 grid layout */
+            <>
+              {/* Top row: Temperature Display | Battery Display */}
+              <Box justifyContent="center" gap={2}>
+                <TemperatureDisplay
+                  currentTemp={mugState.currentTemp}
+                  targetTemp={mugState.targetTemp}
+                  liquidState={mugState.liquidState}
+                  temperatureUnit={localTempUnit}
+                  width={panelWidth}
+                  height={8}
+                  theme={theme}
+                />
+                <BatteryDisplay
+                  batteryLevel={mugState.batteryLevel}
+                  isCharging={mugState.isCharging}
+                  liquidState={mugState.liquidState}
+                  width={panelWidth}
+                  height={8}
+                  theme={theme}
+                />
+              </Box>
 
-            <Box flexDirection="column" flexGrow={1}>
-              <BatteryDisplay
-                batteryLevel={mugState.batteryLevel}
-                isCharging={mugState.isCharging}
-                liquidState={mugState.liquidState}
-              />
-            </Box>
-          </Box>
-
-          <TemperatureControl
-            targetTemp={mugState.targetTemp}
-            temperatureUnit={localTempUnit}
-            onTempChange={handleTempChange}
-            isActive={activeControl === 'temperature'}
-          />
-
-          <Presets
-            presets={presets}
-            selectedIndex={selectedPresetIndex}
-            temperatureUnit={localTempUnit}
-            onSelect={handlePresetSelect}
-            isActive={activeControl === 'none'}
-          />
-
-          {activeControl === 'color' && (
-            <ColorControl
-              color={mugState.color}
-              onColorChange={handleColorChange}
-              isActive={true}
-            />
+              {/* Bottom row: Temperature Control | Presets */}
+              <Box justifyContent="center" gap={2} marginTop={1}>
+                <TemperatureControl
+                  targetTemp={mugState.targetTemp}
+                  temperatureUnit={localTempUnit}
+                  onTempChange={handleTempChange}
+                  isActive={true}
+                  width={panelWidth}
+                  height={9}
+                  theme={theme}
+                />
+                <Presets
+                  presets={presets}
+                  selectedIndex={selectedPresetIndex}
+                  temperatureUnit={localTempUnit}
+                  onSelect={handlePresetSelect}
+                  isActive={activeControl === "none"}
+                  width={panelWidth}
+                  height={9}
+                  theme={theme}
+                />
+              </Box>
+            </>
           )}
         </Box>
       )}
 
-      <HelpDisplay isConnected={mugState.connected} />
+      <HelpDisplay isConnected={mugState.connected} theme={theme} />
     </Box>
   );
 }

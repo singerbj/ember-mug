@@ -19,6 +19,7 @@
     "prebuild": "npm run clean",
     "start": "node dist/cli.js",
     "dev": "tsx src/cli.tsx",
+    "dev-mocked": "EMBER_MOCK=true tsx src/cli.tsx",
     "prepublishOnly": "npm run build",
     "version": "npm run build"
   },
