@@ -1,9 +1,26 @@
 #!/usr/bin/env node
-import React from "react";
-import { render } from "ink";
-import { App } from "./components/App.js";
-import { isMockMode, setBluetoothManager } from "./lib/bluetooth.js";
-import type { BluetoothManager } from "./lib/bluetooth.js";
+
+// Parse command line arguments BEFORE importing modules that initialize Bluetooth
+const args = process.argv.slice(2);
+const showHelp = args.includes('--help') || args.includes('-h');
+const debugMode = args.includes('--debug') || args.includes('-d');
+
+if (showHelp) {
+  console.log(`
+ember-mug - CLI for controlling Ember mugs via Bluetooth
+
+Usage:
+  ember-mug [options]
+
+Options:
+  -d, --debug    Enable debug mode (outputs detailed Bluetooth logs)
+  -h, --help     Show this help message
+
+Environment variables:
+  EMBER_MOCK=true    Run in mock mode (simulates mug for testing)
+`);
+  process.exit(0);
+}
 
 // ANSI escape codes for alternate screen buffer
 const enterAltScreen = "\x1b[?1049h";
@@ -33,16 +50,30 @@ process.stdout.on("resize", () => {
 });
 
 async function main() {
+  // Dynamic imports to avoid initializing Bluetooth for --help
+  const { setDebugMode } = await import("./lib/debug.js");
+
+  // Enable debug mode if flag is set
+  if (debugMode) {
+    setDebugMode(true);
+  }
+
+  const React = await import("react");
+  const { render } = await import("ink");
+  const { App } = await import("./components/App.js");
+  const { isMockMode, setBluetoothManager } = await import("./lib/bluetooth.js");
+
   // Initialize mock manager if in mock mode (set via EMBER_MOCK env var)
   if (isMockMode()) {
     const { getMockBluetoothManager } = await import("./lib/mock-bluetooth.js");
+    const { BluetoothManager } = await import("./lib/bluetooth.js");
     setBluetoothManager(
-      getMockBluetoothManager() as unknown as BluetoothManager,
+      getMockBluetoothManager() as unknown as typeof BluetoothManager.prototype,
     );
   }
 
   // Render the app
-  const app = render(<App />);
+  const app = render(React.createElement(App));
   await app.waitUntilExit();
   process.exit(0);
 }
