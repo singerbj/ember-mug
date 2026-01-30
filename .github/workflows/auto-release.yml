@@ -1,0 +1,141 @@
+name: Auto Release Minor Version
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  calculate-version:
+    runs-on: ubuntu-latest
+    # Skip if this is a release commit (to avoid infinite loops)
+    if: "!startsWith(github.event.head_commit.message, 'chore: release v')"
+    outputs:
+      new_version: ${{ steps.version.outputs.new_version }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Calculate next minor version
+        id: version
+        run: |
+          CURRENT_VERSION=$(node -p "require('./package.json').version")
+          echo "Current version: $CURRENT_VERSION"
+
+          # Parse version components
+          MAJOR=$(echo $CURRENT_VERSION | cut -d. -f1)
+          MINOR=$(echo $CURRENT_VERSION | cut -d. -f2)
+
+          # Bump minor version, reset patch to 0
+          NEW_MINOR=$((MINOR + 1))
+          NEW_VERSION="${MAJOR}.${NEW_MINOR}.0"
+
+          echo "New version: $NEW_VERSION"
+          echo "new_version=$NEW_VERSION" >> $GITHUB_OUTPUT
+
+  release:
+    needs: calculate-version
+    runs-on: ubuntu-latest
+    name: "Release v${{ needs.calculate-version.outputs.new_version }}"
+
+    permissions:
+      contents: write
+      id-token: write
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          registry-url: 'https://registry.npmjs.org'
+          cache: 'npm'
+
+      - name: Configure git
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+
+      - name: Add job summary
+        run: |
+          echo "# Release v${{ needs.calculate-version.outputs.new_version }}" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "Automatically releasing minor version **v${{ needs.calculate-version.outputs.new_version }}**" >> $GITHUB_STEP_SUMMARY
+
+      - name: Check if version already exists
+        run: |
+          if git tag | grep -q "^v${{ needs.calculate-version.outputs.new_version }}$"; then
+            echo "Error: Version v${{ needs.calculate-version.outputs.new_version }} already exists"
+            exit 1
+          fi
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Update package.json version
+        run: npm version ${{ needs.calculate-version.outputs.new_version }} --no-git-tag-version
+
+      - name: Build
+        run: npm run build
+
+      - name: Commit version bump
+        run: |
+          git add package.json package-lock.json
+          git commit -m "chore: release v${{ needs.calculate-version.outputs.new_version }}"
+          git push
+
+      - name: Create and push tag
+        run: |
+          git tag -a "v${{ needs.calculate-version.outputs.new_version }}" -m "Release v${{ needs.calculate-version.outputs.new_version }}"
+          git push origin "v${{ needs.calculate-version.outputs.new_version }}"
+
+      - name: Generate release notes
+        id: release_notes
+        run: |
+          echo "## What's Changed" > release_notes.md
+          echo "" >> release_notes.md
+          # Get commits since last tag
+          LAST_TAG=$(git describe --tags --abbrev=0 HEAD^ 2>/dev/null || echo "")
+          if [ -n "$LAST_TAG" ]; then
+            git log --pretty=format:"* %s (%h)" $LAST_TAG..HEAD~1 >> release_notes.md
+          else
+            # No previous tag - get all commits except the version bump commit
+            COMMIT_COUNT=$(git rev-list --count HEAD)
+            if [ "$COMMIT_COUNT" -gt 1 ]; then
+              git log --pretty=format:"* %s (%h)" HEAD~1 --reverse >> release_notes.md
+            else
+              echo "* Initial release" >> release_notes.md
+            fi
+          fi
+          echo "" >> release_notes.md
+          echo "" >> release_notes.md
+          echo "## Installation" >> release_notes.md
+          echo "" >> release_notes.md
+          echo '```bash' >> release_notes.md
+          echo "# Install globally" >> release_notes.md
+          echo "npm install -g ember-mug@${{ needs.calculate-version.outputs.new_version }}" >> release_notes.md
+          echo "" >> release_notes.md
+          echo "# Or run with npx" >> release_notes.md
+          echo "npx ember-mug@${{ needs.calculate-version.outputs.new_version }}" >> release_notes.md
+          echo '```' >> release_notes.md
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v1
+        with:
+          tag_name: v${{ needs.calculate-version.outputs.new_version }}
+          name: v${{ needs.calculate-version.outputs.new_version }}
+          body_path: release_notes.md
+          prerelease: false
+          generate_release_notes: false
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Publish to npm
+        run: npm publish --provenance --access public
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
