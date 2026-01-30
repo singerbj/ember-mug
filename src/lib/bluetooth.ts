@@ -71,6 +71,14 @@ export class BluetoothManager extends EventEmitter {
         this.emit('mugFound', name);
         await this.stopScanning();
         this.peripheral = peripheral;
+
+        // Wait for BLE adapter to settle after stopping scan
+        // This delay is necessary because some BLE adapters (especially on Linux with BlueZ)
+        // need time to switch from scanning mode to connection mode
+        const POST_SCAN_DELAY = 500;
+        debug(`Waiting ${POST_SCAN_DELAY}ms for BLE adapter to settle after scan...`);
+        await new Promise(resolve => setTimeout(resolve, POST_SCAN_DELAY));
+
         debug('Starting connection process...');
         await this.connectWithRetry();
       }
