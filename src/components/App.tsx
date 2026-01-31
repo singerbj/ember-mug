@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback, useRef } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import { Box, Text, useApp, useInput, useStdout } from "ink";
 import { useMug } from "../hooks/useMug.js";
 import { Header } from "./Header.js";
@@ -17,7 +17,6 @@ import {
   getTemperatureUnit,
   setTemperatureUnit as saveTemperatureUnit,
   setLastTargetTemp,
-  getLastTargetTemp,
   updatePreset,
 } from "../lib/settings.js";
 import { getThemeForState, getTerminalTheme, ThemeKey } from "../lib/theme.js";
@@ -87,21 +86,6 @@ export function App(): React.ReactElement {
     localTempUnit,
     setMugTempUnit,
   ]);
-
-  // Restore last saved target temperature when mug connects
-  const hasRestoredTemp = useRef(false);
-  useEffect(() => {
-    if (mugState.connected && !hasRestoredTemp.current) {
-      const lastTemp = getLastTargetTemp();
-      // Only set if different from current target to avoid unnecessary writes
-      if (lastTemp !== mugState.targetTemp) {
-        setTargetTemp(lastTemp);
-      }
-      hasRestoredTemp.current = true;
-    } else if (!mugState.connected) {
-      hasRestoredTemp.current = false;
-    }
-  }, [mugState.connected, mugState.targetTemp, setTargetTemp]);
 
   // Auto-select preset when target temperature matches
   useEffect(() => {
