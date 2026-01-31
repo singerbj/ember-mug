@@ -30,3 +30,8 @@ coverage/
 
 # npm pack output
 *.tgz
+
+# Reference repos
+EmberMate/
+ember-mug-protocol/
+python-ember-mug/

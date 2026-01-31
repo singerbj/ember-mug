@@ -50,13 +50,36 @@ export function ConnectionStatus({
         {error ? (
           <Box flexDirection="column" alignItems="center" marginY={1}>
             <Text color="red" bold>
-              {error}
+              {error.includes("does not allow write commands")
+                ? "Write Access Required"
+                : error}
             </Text>
-            <Box marginTop={1}>
-              <Text color={theme.dimText}>
-                Note: Mug must be set up with the official Ember app first.
-              </Text>
-            </Box>
+            {error.includes("does not allow write commands") ? (
+              <>
+                <Box marginTop={1} flexDirection="column" alignItems="center">
+                  <Text color={theme.dimText}>
+                    Your Ember mug needs to be set up with the official app first.
+                  </Text>
+                </Box>
+                <Box marginTop={1} flexDirection="column" alignItems="center">
+                  <Text color={theme.dimText}>
+                    1. Download the Ember app from the App Store
+                  </Text>
+                  <Text color={theme.dimText}>
+                    2. Pair your mug with the app and complete setup
+                  </Text>
+                  <Text color={theme.dimText}>
+                    3. Come back here and press [r] to reconnect
+                  </Text>
+                </Box>
+              </>
+            ) : (
+              <Box marginTop={1}>
+                <Text color={theme.dimText}>
+                  Note: Mug must be set up with the official Ember app first.
+                </Text>
+              </Box>
+            )}
             <Box marginTop={1}>
               <Text color={theme.dimText}>
                 Press{" "}

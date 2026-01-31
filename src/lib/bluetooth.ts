@@ -243,10 +243,29 @@ export class BluetoothManager extends EventEmitter {
           debug("Starting service/characteristic discovery...");
           await this.discoverCharacteristics();
 
-          // Attempt to authenticate/pair with the mug by reading protected characteristics
-          // This may trigger the OS pairing dialog on macOS
-          debug("Attempting to authenticate with mug (may trigger pairing)...");
-          await this.attemptPairing();
+          // Try to trigger OS-level pairing by reading protected characteristics
+          // This may show a pairing dialog on macOS
+          debug("Triggering pairing by reading protected characteristics...");
+          await this.triggerPairing();
+
+          // Make the mug writable by writing a random UDSK (User Device Secret Key)
+          // This is required for the mug to accept write operations
+          debug("Making mug writable by setting UDSK...");
+          const writable = await this.makeWritable();
+
+          // Test if writes actually work - this is REQUIRED for the app to function
+          debug("Testing write capability...");
+          const writesWork = await this.testWriteCapability();
+          if (!writesWork) {
+            const writeError = new Error(
+              "Your Ember mug does not allow write commands. Please pair your mug with the official Ember app first, then reconnect. See https://apps.apple.com/app/ember-smart-mug/id1095189177",
+            );
+            debug("Write test failed, rejecting connection:", writeError.message);
+            this.handleDisconnect();
+            reject(writeError);
+            return;
+          }
+          debug("Write test PASSED - mug is ready for control");
 
           debug("Setting up push notifications...");
           await this.setupNotifications();
@@ -304,10 +323,10 @@ export class BluetoothManager extends EventEmitter {
 
         debug(`Found ${characteristics?.length || 0} characteristics`);
         for (const char of characteristics || []) {
-          const originalUuid = char.uuid;
           const normalizedUuid = char.uuid.toLowerCase().replace(/-/g, "");
+          const props = char.properties || [];
           debug(
-            `  - Characteristic: original="${originalUuid}" normalized="${normalizedUuid}"`,
+            `  - Characteristic: uuid="${normalizedUuid}" properties=[${props.join(", ")}]`,
           );
           // Increase max listeners to prevent memory leak warnings during rapid operations
           char.setMaxListeners(50);
@@ -396,11 +415,11 @@ export class BluetoothManager extends EventEmitter {
     ]);
   }
 
-  private async attemptPairing(): Promise<void> {
-    // Try reading protected characteristics to trigger OS-level pairing
-    // The UDSK and DSK characteristics require authentication on Ember mugs
+  private async triggerPairing(): Promise<void> {
+    // Try to trigger OS-level pairing by reading characteristics that require authentication
+    // On macOS, this should show a pairing dialog if the device isn't already paired
 
-    // First try reading the mug name
+    // Read mug name first (usually doesn't require auth but good to start)
     try {
       const nameData = await this.readCharacteristic(
         EMBER_CHARACTERISTICS.MUG_NAME,
@@ -416,32 +435,154 @@ export class BluetoothManager extends EventEmitter {
       debug("Failed to read mug name:", err);
     }
 
-    // Try reading DSK (Device Secret Key) - this often requires pairing
+    // Read DSK (Device Secret Key) - this typically requires pairing
     try {
-      debug("Reading DSK characteristic (may trigger pairing)...");
+      debug("Reading DSK to trigger pairing...");
       const dskData = await this.readCharacteristic(EMBER_CHARACTERISTICS.DSK);
       if (dskData) {
-        debug("DSK read successful, length:", dskData.length);
+        debug(`DSK read successful, length: ${dskData.length}, data: ${dskData.toString("hex")}`);
       }
     } catch (err) {
-      debug("Failed to read DSK (this is normal if not paired):", err);
+      debug("Failed to read DSK:", err);
     }
 
-    // Try reading UDSK (User Device Secret Key) - this requires authentication
+    // Small delay to allow pairing to complete
+    await new Promise((resolve) => setTimeout(resolve, 500));
+  }
+
+  private async testWriteCapability(): Promise<boolean> {
+    // Test if writes actually work by trying to write and read back the LED color
+    debug("Testing write capability with LED color...");
+
     try {
-      debug("Reading UDSK characteristic (may trigger pairing)...");
-      const udskData = await this.readCharacteristic(
+      // Read current LED color
+      const originalData = await this.readCharacteristic(EMBER_CHARACTERISTICS.LED_COLOR);
+      if (!originalData || originalData.length < 4) {
+        debug("Could not read LED color for write test");
+        return false;
+      }
+      const original = { r: originalData[0], g: originalData[1], b: originalData[2], a: originalData[3] };
+      debug(`Original LED color: rgba(${original.r}, ${original.g}, ${original.b}, ${original.a})`);
+
+      // Write a slightly different color
+      const testColor = {
+        r: (original.r + 10) % 256,
+        g: original.g,
+        b: original.b,
+        a: original.a,
+      };
+      const testBuffer = Buffer.from([testColor.r, testColor.g, testColor.b, testColor.a]);
+      debug(`Writing test color: rgba(${testColor.r}, ${testColor.g}, ${testColor.b}, ${testColor.a})`);
+
+      await this.writeCharacteristic(EMBER_CHARACTERISTICS.LED_COLOR, testBuffer);
+
+      // Wait for mug to process
+      await new Promise((resolve) => setTimeout(resolve, 200));
+
+      // Read back
+      const verifyData = await this.readCharacteristic(EMBER_CHARACTERISTICS.LED_COLOR);
+      if (!verifyData) {
+        debug("Could not read LED color after write test");
+        return false;
+      }
+      const verify = { r: verifyData[0], g: verifyData[1], b: verifyData[2], a: verifyData[3] };
+      debug(`Verify LED color: rgba(${verify.r}, ${verify.g}, ${verify.b}, ${verify.a})`);
+
+      // Restore original color
+      const restoreBuffer = Buffer.from([original.r, original.g, original.b, original.a]);
+      await this.writeCharacteristic(EMBER_CHARACTERISTICS.LED_COLOR, restoreBuffer);
+
+      // Check if write worked
+      if (verify.r === testColor.r) {
+        debug("Write test PASSED - writes are working!");
+        return true;
+      } else {
+        debug(`Write test FAILED - expected r=${testColor.r}, got r=${verify.r}`);
+        debug("Writes are not working. The mug may need to be set up with the official Ember app.");
+        return false;
+      }
+    } catch (err) {
+      debug(`Write test failed with error: ${err}`);
+      return false;
+    }
+  }
+
+  private async makeWritable(): Promise<boolean> {
+    // The Ember mug requires a UDSK (User Device Secret Key) to be set before
+    // it will accept write operations. This is based on the python-ember-mug implementation.
+    // See: https://github.com/sopelj/python-ember-mug
+    //
+    // IMPORTANT: According to python-ember-mug documentation:
+    // "If the device has not been set up in the app since it was reset, writing is not allowed.
+    //  I don't know what they set in the app, but it changes something, and it doesn't work without it."
+    //
+    // This means the mug must first be set up with the official Ember app for writes to work.
+
+    try {
+      // First check if UDSK is already set (device might already be writable)
+      const existingUdsk = await this.readCharacteristic(
         EMBER_CHARACTERISTICS.UDSK,
       );
-      if (udskData) {
-        debug("UDSK read successful, length:", udskData.length);
+      if (existingUdsk) {
+        const isAllZeros = existingUdsk.every((b) => b === 0);
+        debug(`UDSK read: ${existingUdsk.toString("hex")} (${existingUdsk.length} bytes, allZeros: ${isAllZeros})`);
+        if (!isAllZeros) {
+          debug(`UDSK already set, device should be writable`);
+          return true;
+        }
       }
-    } catch (err) {
-      debug("Failed to read UDSK (this is normal if not paired):", err);
-    }
 
-    // Small delay to allow any pairing dialogs to be processed
-    await new Promise((resolve) => setTimeout(resolve, 500));
+      debug("UDSK is empty, attempting to write a new one...");
+      debug("NOTE: This may only work if the mug was previously set up with the official Ember app.");
+
+      // Generate 20 random bytes (matching the read size from the mug)
+      // The python-ember-mug uses base64 encoding, but let's try raw bytes first
+      // since the mug returns 20 raw bytes when read
+      const udskData = Buffer.alloc(20);
+      for (let i = 0; i < 20; i++) {
+        udskData[i] = Math.floor(Math.random() * 256);
+      }
+      debug(`UDSK data to write: ${udskData.toString("hex")} (${udskData.length} bytes)`);
+
+      // Write with a shorter timeout to fail fast if writes aren't working
+      const writePromise = this.writeCharacteristic(
+        EMBER_CHARACTERISTICS.UDSK,
+        udskData,
+      );
+      const timeoutPromise = new Promise<never>((_, reject) =>
+        setTimeout(() => reject(new Error("UDSK write timeout - writes may not be supported")), 3000),
+      );
+
+      await Promise.race([writePromise, timeoutPromise]);
+      debug("UDSK write completed");
+
+      // Wait a bit for the mug to process
+      await new Promise((resolve) => setTimeout(resolve, 300));
+
+      // Verify the UDSK was actually written
+      const verifyUdsk = await this.readCharacteristic(
+        EMBER_CHARACTERISTICS.UDSK,
+      );
+      if (verifyUdsk) {
+        const verifyIsAllZeros = verifyUdsk.every((b) => b === 0);
+        debug(`UDSK verify read: ${verifyUdsk.toString("hex")} (allZeros: ${verifyIsAllZeros})`);
+        if (verifyIsAllZeros) {
+          debug("WARNING: UDSK was written but read back as zeros.");
+          debug("This likely means the mug needs to be set up with the official Ember app first.");
+          debug("Please download the Ember app from the App Store and pair your mug there.");
+          return false;
+        }
+      }
+
+      debug("UDSK written and verified - device should now be writable");
+      return true;
+    } catch (err) {
+      debug("Failed to make device writable:", err);
+      debug("This may be because the mug hasn't been set up with the official Ember app.");
+      debug("Try setting up your mug in the Ember app first, then reconnect here.");
+      // Don't throw - device might still work for reads even if writes fail
+      return false;
+    }
   }
 
   private startPolling(): void {
@@ -498,9 +639,22 @@ export class BluetoothManager extends EventEmitter {
       throw new Error(error);
     }
 
-    debug(`  Characteristic found, proceeding with write...`);
+    const props = char.properties || [];
+    debug(`  Characteristic properties: [${props.join(", ")}]`);
+
+    // Determine write type based on characteristic properties
+    // 'write' = write with response, 'writeWithoutResponse' = write without response
+    const supportsWrite = props.includes("write");
+    const supportsWriteWithoutResponse = props.includes("writeWithoutResponse");
+
+    debug(`  Supports write: ${supportsWrite}, writeWithoutResponse: ${supportsWriteWithoutResponse}`);
+
+    // Use write with response if supported, otherwise fall back to without response
+    const useWithoutResponse = !supportsWrite && supportsWriteWithoutResponse;
+    debug(`  Using write ${useWithoutResponse ? "WITHOUT" : "WITH"} response...`);
+
     return new Promise((resolve, reject) => {
-      char.write(data, false, (error) => {
+      char.write(data, useWithoutResponse, (error) => {
         if (error) {
           debug(`  Write failed: ${error}`);
           reject(error);
@@ -597,15 +751,21 @@ export class BluetoothManager extends EventEmitter {
 
     await this.writeCharacteristic(EMBER_CHARACTERISTICS.TARGET_TEMP, buffer);
 
+    // Give the mug time to process the write before re-reading
+    debug(`  Waiting 200ms for mug to process write...`);
+    await new Promise((resolve) => setTimeout(resolve, 200));
+
     // Re-read to confirm the value was actually set
     debug(`  Re-reading target temp to confirm...`);
     await this.readTargetTemp();
 
     // Verify the value actually changed
     if (Math.abs(this.state.targetTemp - clampedTemp) > 0.5) {
-      const error = `Temperature write succeeded but value didn't change. This usually means the mug needs to be re-paired. Try pressing 'r' for repair.`;
+      const error = `Temperature write succeeded but value didn't change (expected ${clampedTemp}°C, got ${this.state.targetTemp}°C). This usually means either:\n` +
+        `  1. The mug needs to be set up with the official Ember app first\n` +
+        `  2. The mug needs to be re-paired (press 'r' to repair)\n` +
+        `  3. You may need to "Forget" the mug in System Settings > Bluetooth, then reconnect`;
       debug(`  ERROR: ${error}`);
-      debug(`  Expected: ${clampedTemp}°C, Got: ${this.state.targetTemp}°C`);
       throw new Error(error);
     }
   }
