@@ -87,10 +87,10 @@ export function App(): React.ReactElement {
     setMugTempUnit,
   ]);
 
-  // Auto-select preset when target temperature matches
+  // Auto-select preset when target temperature matches (with tolerance for floating point)
   useEffect(() => {
     const matchingIndex = presets.findIndex(
-      (p) => p.temperature === mugState.targetTemp,
+      (p) => Math.abs(p.temperature - mugState.targetTemp) < 0.1,
     );
     setSelectedPresetIndex(matchingIndex);
   }, [mugState.targetTemp, presets]);
