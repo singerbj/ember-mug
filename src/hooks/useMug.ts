@@ -45,6 +45,13 @@ export function useMug(): UseMugReturn {
     { value: number; time: number }[]
   >([]);
 
+  // Smoothed rate values using exponential moving average
+  const [smoothedTempRate, setSmoothedTempRate] = useState<number>(0);
+  const [smoothedBatteryRate, setSmoothedBatteryRate] = useState<number>(0);
+
+  // Smoothing factor: lower = more smoothing, higher = more responsive
+  const SMOOTHING_ALPHA = 0.25;
+
   // Update temp history
   useEffect(() => {
     if (state.connected && state.liquidState !== LiquidState.Empty) {
@@ -62,7 +69,10 @@ export function useMug(): UseMugReturn {
         return next.filter((item) => now - item.time < 5 * 60 * 1000);
       });
     } else if (!state.connected || state.liquidState === LiquidState.Empty) {
-      if (tempHistory.length > 0) setTempHistory([]);
+      if (tempHistory.length > 0) {
+        setTempHistory([]);
+        setSmoothedTempRate(0);
+      }
     }
   }, [state.currentTemp, state.connected, state.liquidState]);
 
@@ -83,9 +93,31 @@ export function useMug(): UseMugReturn {
         return next.filter((item) => now - item.time < 10 * 60 * 1000);
       });
     } else if (!state.connected) {
-      if (batteryHistory.length > 0) setBatteryHistory([]);
+      if (batteryHistory.length > 0) {
+        setBatteryHistory([]);
+        setSmoothedBatteryRate(0);
+      }
     }
   }, [state.batteryLevel, state.connected]);
+
+  // Update smoothed rates using exponential moving average
+  useEffect(() => {
+    const rawTempRate = calculateRate(tempHistory);
+    setSmoothedTempRate((prev) => {
+      // Initialize with first value, then apply EMA
+      if (prev === 0 && rawTempRate !== 0) return rawTempRate;
+      return SMOOTHING_ALPHA * rawTempRate + (1 - SMOOTHING_ALPHA) * prev;
+    });
+  }, [tempHistory]);
+
+  useEffect(() => {
+    const rawBatteryRate = calculateRate(batteryHistory, 5 * 60 * 1000);
+    setSmoothedBatteryRate((prev) => {
+      // Initialize with first value, then apply EMA
+      if (prev === 0 && rawBatteryRate !== 0) return rawBatteryRate;
+      return SMOOTHING_ALPHA * rawBatteryRate + (1 - SMOOTHING_ALPHA) * prev;
+    });
+  }, [batteryHistory]);
 
   useEffect(() => {
     const manager = getBluetoothManager();
@@ -181,8 +213,8 @@ export function useMug(): UseMugReturn {
     }
   }, []);
 
-  const tempRate = calculateRate(tempHistory);
-  const batteryRate = calculateRate(batteryHistory, 5 * 60 * 1000);
+  const tempRate = smoothedTempRate;
+  const batteryRate = smoothedBatteryRate;
 
   return {
     state,

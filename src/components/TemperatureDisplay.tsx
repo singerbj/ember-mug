@@ -34,7 +34,6 @@ export function TemperatureDisplay({
   tempRate,
 }: TemperatureDisplayProps): React.ReactElement {
   const isEmpty = liquidState === LiquidState.Empty;
-  const isAtTarget = Math.abs(currentTemp - targetTemp) < 0.5 && !isEmpty;
 
   const timeToTarget = estimateTimeToTargetTemp(
     currentTemp,
@@ -96,9 +95,10 @@ export function TemperatureDisplay({
       <Box justifyContent="center">
         <Text>
           <Text color={theme.primary} bold>
-            {getLiquidStateText(liquidState)}
+            {getLiquidStateText(liquidState, currentTemp, targetTemp)}
           </Text>
-          {isAtTarget && (
+
+          {timeToTarget !== null && timeToTarget > 0 && (
             <Text color={theme.primary} bold>
               {" "}
               *

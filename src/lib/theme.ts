@@ -1,4 +1,5 @@
 import { LiquidState } from './types.js';
+import { MugState } from './types.js';
 
 export interface Theme {
   primary: string;
@@ -17,18 +18,18 @@ export const THEMES = {
     name: 'Heating',
   },
   cooling: {
-    primary: '#FF6B35',  // Orange (cooling down but not at temp yet)
-    secondary: '#FF8C5A',
-    text: 'white',
-    dimText: '#FFD4C4',
-    name: 'Cooling',
-  },
-  stable: {
-    primary: '#4A90D9',  // Blue
+    primary: '#4A90D9',  // Blue (cooling down to target)
     secondary: '#6BA3E0',
     text: 'white',
     dimText: '#B8D4F0',
-    name: 'Perfect',
+    name: 'Cooling',
+  },
+  stable: {
+    primary: '#F5C542',  // Yellow
+    secondary: '#F7D979',
+    text: 'black',
+    dimText: '#666666',
+    name: 'At temp',
   },
   empty: {
     primary: '#666666',  // Grey
@@ -53,27 +54,27 @@ export const THEMES = {
   },
 } as const;
 
-// Terminal color mappings (closest ANSI colors)
+// Terminal color mappings (Ink supports hex colors)
 export const TERMINAL_COLORS = {
   heating: {
-    primary: 'yellow',      // Closest to orange in terminal
-    secondary: 'yellowBright',
-    border: 'yellow',
+    primary: '#FF6B35',      // Orange
+    secondary: '#FF8C5A',
+    border: '#FF6B35',
     text: 'white',
     dimText: 'gray',
   },
   cooling: {
-    primary: 'yellow',
-    secondary: 'yellowBright',
-    border: 'yellow',
+    primary: '#4A90D9',      // Blue (cooling down to target)
+    secondary: '#6BA3E0',
+    border: '#4A90D9',
     text: 'white',
     dimText: 'gray',
   },
   stable: {
-    primary: 'cyan',
-    secondary: 'cyanBright',
-    border: 'cyan',
-    text: 'white',
+    primary: 'yellow',
+    secondary: 'yellowBright',
+    border: 'yellow',
+    text: 'black',
     dimText: 'gray',
   },
   empty: {
@@ -111,12 +112,12 @@ export function getThemeForState(liquidState: LiquidState, connected: boolean): 
       return 'empty';
     case LiquidState.Filling:
       return 'filling';
+    case LiquidState.StableTemperature:
+      return 'stable';
     case LiquidState.Heating:
       return 'heating';
     case LiquidState.Cooling:
       return 'cooling';
-    case LiquidState.StableTemperature:
-      return 'stable';
     default:
       return 'empty';
   }

@@ -29,6 +29,7 @@ export function HelpDisplay({
             <HelpKey keyChar="t" label="temp" color={theme.primary} />
             <HelpKey keyChar="1-3" label="presets" color={theme.primary} />
             <HelpKey keyChar="u" label="unit" color={theme.primary} />
+            <HelpKey keyChar="r" label="repair" color={theme.primary} />
             <HelpKey keyChar="o" label="settings" color={theme.primary} />
             <HelpKey keyChar="q" label="quit" color={theme.primary} />
           </>

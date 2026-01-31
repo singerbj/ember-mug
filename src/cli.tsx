@@ -76,8 +76,28 @@ async function runDebugMode() {
     console.error(`[EVENT] Error: ${error.message}`);
   });
 
+  let previousState: Record<string, unknown> | null = null;
+
   manager.on('stateChange', (state: Record<string, unknown>) => {
-    console.log(`[EVENT] State changed:`, JSON.stringify(state, null, 2));
+    // Check if any values have changed
+    const hasChanges = !previousState || Object.keys(state).some(key => {
+      const currentVal = state[key];
+      const prevVal = previousState![key];
+
+      // Handle nested objects (like color)
+      if (typeof currentVal === 'object' && typeof prevVal === 'object' && currentVal !== null && prevVal !== null) {
+        return Object.keys(currentVal as Record<string, unknown>).some(
+          subKey => (currentVal as Record<string, unknown>)[subKey] !== (prevVal as Record<string, unknown>)[subKey]
+        );
+      }
+
+      return currentVal !== prevVal;
+    });
+
+    if (hasChanges) {
+      console.log(`[EVENT] State changed:`, JSON.stringify(state, null, 2));
+      previousState = state;
+    }
   });
 
   // Handle graceful shutdown
@@ -104,7 +124,9 @@ async function runDebugMode() {
   });
 
   console.log("\n--- Debug Commands ---");
-  console.log("  temp <value>  - Set target temperature (50-63°C)");
+  console.log("  temp <value>[C|F] - Set target temperature (50-63°C or 122-145°F)");
+  console.log("                       Default unit: uses mug's current setting");
+  console.log("                       Examples: temp 55C, temp 122F, temp 55");
   console.log("  color <r> <g> <b> [a]  - Set LED color (0-255)");
   console.log("  status        - Show current status");
   console.log("  readall       - Read all characteristic values");
@@ -117,11 +139,39 @@ async function runDebugMode() {
     try {
       if (cmd === 'temp' && parts[1]) {
         const temp = parseFloat(parts[1]);
-        if (isNaN(temp) || temp < 50 || temp > 63) {
-          console.log("  Error: Temperature must be between 50 and 63");
+        const state = manager.getState();
+
+        // Check if user specified unit (e.g., "50C" or "122F")
+        const unit = parts[1].toUpperCase().endsWith('F') ? 'F' :
+                     parts[1].toUpperCase().endsWith('C') ? 'C' : null;
+
+        let tempCelsius: number;
+        let displayUnit: string;
+
+        if (unit === 'F') {
+          // User specified Fahrenheit
+          tempCelsius = (temp - 32) * 5 / 9;
+          displayUnit = 'F';
+        } else if (unit === 'C') {
+          // User specified Celsius
+          tempCelsius = temp;
+          displayUnit = 'C';
+        } else if (state.temperatureUnit === 1) {
+          // Mug is in Fahrenheit mode, assume input is F
+          tempCelsius = (temp - 32) * 5 / 9;
+          displayUnit = 'F';
         } else {
-          console.log(`  Setting temperature to ${temp}°C...`);
-          await manager.setTargetTemp(temp);
+          // Mug is in Celsius mode
+          tempCelsius = temp;
+          displayUnit = 'C';
+        }
+
+        if (isNaN(tempCelsius) || tempCelsius < 50 || tempCelsius > 63) {
+          console.log(`  Error: Temperature must be between 50-63°C (122-145°F)`);
+          console.log(`  You entered: ${temp}°${displayUnit}, which is ${tempCelsius.toFixed(1)}°C`);
+        } else {
+          console.log(`  Setting temperature to ${temp}°${displayUnit} (${tempCelsius.toFixed(1)}°C)...`);
+          await manager.setTargetTemp(tempCelsius);
           console.log(`  Done! Check mug for update.`);
         }
       } else if (cmd === 'readall') {

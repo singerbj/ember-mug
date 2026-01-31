@@ -39,20 +39,19 @@ export function getBatteryIcon(level: number, isCharging: boolean): string {
   return "....";
 }
 
-export function getLiquidStateText(state: LiquidState): string {
-  switch (state) {
-    case LiquidState.Empty:
-      return "Empty";
-    case LiquidState.Filling:
-      return "Filling";
-    case LiquidState.Cooling:
-      return "Cooling";
-    case LiquidState.Heating:
-      return "Heating";
-    case LiquidState.StableTemperature:
-      return "Perfect Temperature";
-    default:
-      return "Unknown";
+export function getLiquidStateText(state: LiquidState, currentTemp: number = 0, targetTemp: number = 0): string {
+  // For Empty and Filling, use the mug's state directly
+  if (state === LiquidState.Empty) return "Empty";
+  if (state === LiquidState.Filling) return "Filling";
+
+  // For Heating, Cooling, StableTemperature, calculate based on actual temps
+  const diff = Math.abs(currentTemp - targetTemp);
+  if (diff < 1) {
+    return "At temp";
+  } else if (currentTemp < targetTemp) {
+    return "Heating";
+  } else {
+    return "Cooling";
   }
 }
 

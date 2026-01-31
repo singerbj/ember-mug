@@ -106,6 +106,8 @@ The Ember mug Bluetooth protocol was reverse-engineered by [orlopau/ember-mug](h
 
 This project was heavily inspired by [EmberMate](https://github.com/matthewnitschke/EmberMate).
 
+Coffee mug ASCII art by [Felix Lee](https://www.ascii-art.de/ascii/c/coffee.txt).
+
 ## Versioning
 
 This project uses [Semantic Versioning](https://semver.org/). Releases are published to npm automatically when a new version tag is pushed to the main branch.

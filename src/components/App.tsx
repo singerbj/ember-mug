@@ -1,7 +1,8 @@
-import React, { useState, useEffect, useCallback } from "react";
+import React, { useState, useEffect, useCallback, useRef } from "react";
 import { Box, Text, useApp, useInput, useStdout } from "ink";
 import { useMug } from "../hooks/useMug.js";
 import { Header } from "./Header.js";
+import { CoffeeMug } from "./CoffeeMug.js";
 import { TemperatureDisplay } from "./TemperatureDisplay.js";
 import { BatteryDisplay } from "./BatteryDisplay.js";
 import { TemperatureControl } from "./TemperatureControl.js";
@@ -9,17 +10,19 @@ import { Presets } from "./Presets.js";
 import { ConnectionStatus } from "./ConnectionStatus.js";
 import { SettingsView } from "./SettingsView.js";
 import { HelpDisplay } from "./HelpDisplay.js";
+import { RepairInstructions } from "./RepairInstructions.js";
 import { TemperatureUnit, Preset, RGBColor } from "../lib/types.js";
 import {
   getPresets,
   getTemperatureUnit,
   setTemperatureUnit as saveTemperatureUnit,
   setLastTargetTemp,
+  getLastTargetTemp,
   updatePreset,
 } from "../lib/settings.js";
 import { getThemeForState, getTerminalTheme, ThemeKey } from "../lib/theme.js";
 
-type ViewMode = "main" | "settings";
+type ViewMode = "main" | "settings" | "repair";
 type ActiveControl = "none" | "temperature";
 
 export function App(): React.ReactElement {
@@ -27,14 +30,20 @@ export function App(): React.ReactElement {
   const { stdout } = useStdout();
   const terminalWidth = stdout?.columns || 80;
 
-  // Responsive layout: stack vertically on narrow terminals, 2x2 grid on wide
-  const isNarrowTerminal = terminalWidth < 80;
+  // Responsive layout: stack vertically on narrow terminals, 3 columns on wide
+  const isNarrowTerminal = terminalWidth < 90;
 
-  // Calculate panel widths: 1/4 screen each in 2x2 grid (accounts for gaps)
-  // For a 2x2 grid with gap of 2 between panels, each panel is (width - 6) / 2
+  // Coffee mug width: fixed at ~22 columns for the ASCII art
+  const coffeeMugWidth = 24;
+
+  // Calculate panel widths for 2x2 grid on the right side
+  // For wide terminals: CoffeeMug | Panel Panel
+  //                    CoffeeMug | Panel Panel
+  // Each panel gets (remainingWidth - 2 gaps) / 2
+  const remainingWidth = terminalWidth - coffeeMugWidth - 3; // -3 for gaps
   const panelWidth = isNarrowTerminal
     ? terminalWidth - 4 // Full width minus margins for stacked layout
-    : Math.floor((terminalWidth - 6) / 2); // Half width minus gaps for 2x2 grid
+    : Math.max(20, Math.floor((remainingWidth - 2) / 2)); // Min 20 for panel content
 
   const {
     state: mugState,
@@ -45,6 +54,7 @@ export function App(): React.ReactElement {
     setTargetTemp,
     setTemperatureUnit: setMugTempUnit,
     setLedColor,
+    disconnect,
     tempRate,
     batteryRate,
   } = useMug();
@@ -78,11 +88,33 @@ export function App(): React.ReactElement {
     setMugTempUnit,
   ]);
 
+  // Restore last saved target temperature when mug connects
+  const hasRestoredTemp = useRef(false);
+  useEffect(() => {
+    if (mugState.connected && !hasRestoredTemp.current) {
+      const lastTemp = getLastTargetTemp();
+      // Only set if different from current target to avoid unnecessary writes
+      if (lastTemp !== mugState.targetTemp) {
+        setTargetTemp(lastTemp);
+      }
+      hasRestoredTemp.current = true;
+    } else if (!mugState.connected) {
+      hasRestoredTemp.current = false;
+    }
+  }, [mugState.connected, mugState.targetTemp, setTargetTemp]);
+
+  // Auto-select preset when target temperature matches
+  useEffect(() => {
+    const matchingIndex = presets.findIndex(
+      (p) => p.temperature === mugState.targetTemp,
+    );
+    setSelectedPresetIndex(matchingIndex);
+  }, [mugState.targetTemp, presets]);
+
   const handleTempChange = useCallback(
     async (temp: number) => {
       await setTargetTemp(temp);
       setLastTargetTemp(temp);
-      setSelectedPresetIndex(-1);
     },
     [setTargetTemp],
   );
@@ -124,6 +156,18 @@ export function App(): React.ReactElement {
     updatePreset(preset.id, preset);
   }, []);
 
+  const handleRepair = useCallback(async () => {
+    const { getBluetoothManager } = await import("../lib/bluetooth.js");
+    const manager = getBluetoothManager();
+    await manager.forgetAndRepair();
+    setViewMode("repair");
+  }, []);
+
+  const handleRepairComplete = useCallback(async () => {
+    setViewMode("main");
+    await startScanning();
+  }, [startScanning]);
+
   useInput((input, key) => {
     // Global controls
     if (input === "q" && viewMode === "main" && activeControl === "none") {
@@ -154,7 +198,10 @@ export function App(): React.ReactElement {
       }
 
       if (mugState.connected) {
-        // 'c' hotkey removed
+        if (input === "r") {
+          handleRepair();
+          return;
+        }
 
         if (input === "o") {
           setViewMode("settings");
@@ -172,6 +219,25 @@ export function App(): React.ReactElement {
       }
     }
   });
+
+  // Repair view
+  if (viewMode === "repair") {
+    return (
+      <Box flexDirection="column">
+        <Header
+          mugName={mugState.mugName}
+          connected={false}
+          theme={theme}
+          ledColor={mugState.color}
+        />
+        <RepairInstructions
+          onComplete={handleRepairComplete}
+          onCancel={() => setViewMode("main")}
+          theme={theme}
+        />
+      </Box>
+    );
+  }
 
   // Settings view
   if (viewMode === "settings") {
@@ -221,17 +287,22 @@ export function App(): React.ReactElement {
       ) : (
         <Box flexDirection="column">
           {isNarrowTerminal ? (
-            /* Narrow terminal: stack all panels vertically */
+            /* Narrow terminal: coffee mug on top, stack all panels vertically */
             <>
-              <TemperatureDisplay
-                currentTemp={mugState.currentTemp}
-                targetTemp={mugState.targetTemp}
-                liquidState={mugState.liquidState}
-                temperatureUnit={localTempUnit}
-                width={panelWidth}
-                theme={theme}
-                tempRate={tempRate}
-              />
+              <Box justifyContent="center">
+                <CoffeeMug theme={theme} />
+              </Box>
+              <Box marginTop={1}>
+                <TemperatureDisplay
+                  currentTemp={mugState.currentTemp}
+                  targetTemp={mugState.targetTemp}
+                  liquidState={mugState.liquidState}
+                  temperatureUnit={localTempUnit}
+                  width={panelWidth}
+                  theme={theme}
+                  tempRate={tempRate}
+                />
+              </Box>
               <Box marginTop={1}>
                 <BatteryDisplay
                   batteryLevel={mugState.batteryLevel}
@@ -265,52 +336,59 @@ export function App(): React.ReactElement {
               </Box>
             </>
           ) : (
-            /* Wide terminal: 2x2 grid layout */
+            /* Wide terminal: CoffeeMug on left, 2x2 grid on right */
             <>
-              {/* Top row: Temperature Display | Battery Display */}
-              <Box justifyContent="center" gap={2}>
-                <TemperatureDisplay
-                  currentTemp={mugState.currentTemp}
-                  targetTemp={mugState.targetTemp}
-                  liquidState={mugState.liquidState}
-                  temperatureUnit={localTempUnit}
-                  width={panelWidth}
-                  height={8}
-                  theme={theme}
-                  tempRate={tempRate}
-                />
-                <BatteryDisplay
-                  batteryLevel={mugState.batteryLevel}
-                  isCharging={mugState.isCharging}
-                  liquidState={mugState.liquidState}
-                  width={panelWidth}
-                  height={8}
-                  theme={theme}
-                  batteryRate={batteryRate}
-                />
-              </Box>
+              {/* Top row: CoffeeMug | Temperature Display | Battery Display */}
+              <Box justifyContent="center" gap={1}>
+                <Box width={coffeeMugWidth} height={20}>
+                  <CoffeeMug theme={theme} />
+                </Box>
+                <Box flexDirection="column" gap={1}>
+                  <Box gap={1}>
+                    <TemperatureDisplay
+                      currentTemp={mugState.currentTemp}
+                      targetTemp={mugState.targetTemp}
+                      liquidState={mugState.liquidState}
+                      temperatureUnit={localTempUnit}
+                      width={panelWidth}
+                      height={9}
+                      theme={theme}
+                      tempRate={tempRate}
+                    />
+                    <BatteryDisplay
+                      batteryLevel={mugState.batteryLevel}
+                      isCharging={mugState.isCharging}
+                      liquidState={mugState.liquidState}
+                      width={panelWidth}
+                      height={9}
+                      theme={theme}
+                      batteryRate={batteryRate}
+                    />
+                  </Box>
 
-              {/* Bottom row: Temperature Control | Presets */}
-              <Box justifyContent="center" gap={2} marginTop={1}>
-                <TemperatureControl
-                  targetTemp={mugState.targetTemp}
-                  temperatureUnit={localTempUnit}
-                  onTempChange={handleTempChange}
-                  isActive={true}
-                  width={panelWidth}
-                  height={9}
-                  theme={theme}
-                />
-                <Presets
-                  presets={presets}
-                  selectedIndex={selectedPresetIndex}
-                  temperatureUnit={localTempUnit}
-                  onSelect={handlePresetSelect}
-                  isActive={activeControl === "none"}
-                  width={panelWidth}
-                  height={9}
-                  theme={theme}
-                />
+                  {/* Bottom row: Temperature Control | Presets */}
+                  <Box gap={1}>
+                    <TemperatureControl
+                      targetTemp={mugState.targetTemp}
+                      temperatureUnit={localTempUnit}
+                      onTempChange={handleTempChange}
+                      isActive={true}
+                      width={panelWidth}
+                      height={9}
+                      theme={theme}
+                    />
+                    <Presets
+                      presets={presets}
+                      selectedIndex={selectedPresetIndex}
+                      temperatureUnit={localTempUnit}
+                      onSelect={handlePresetSelect}
+                      isActive={activeControl === "none"}
+                      width={panelWidth}
+                      height={9}
+                      theme={theme}
+                    />
+                  </Box>
+                </Box>
               </Box>
             </>
           )}
