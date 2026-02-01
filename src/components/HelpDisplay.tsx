@@ -26,7 +26,6 @@ export function HelpDisplay({
       <Box paddingY={1} justifyContent="center" gap={2}>
         {isConnected ? (
           <>
-            <HelpKey keyChar="t" label="temp" color={theme.primary} />
             <HelpKey keyChar="1-3" label="presets" color={theme.primary} />
             <HelpKey keyChar="u" label="unit" color={theme.primary} />
             <HelpKey keyChar="r" label="repair" color={theme.primary} />

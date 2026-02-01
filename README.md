@@ -3,6 +3,8 @@
 [![npm version](https://badge.fury.io/js/ember-mug.svg)](https://www.npmjs.com/package/ember-mug)
 [![CI](https://github.com/singerbj/ember-cli/actions/workflows/ci.yml/badge.svg)](https://github.com/singerbj/ember-cli/actions/workflows/ci.yml)
 
+![Screenshot](images/screenshot.png)
+
 A TypeScript CLI application for controlling Ember mugs, built with [Ink](https://github.com/vadimdemedes/ink) (React for CLIs).
 
 ## Installation
