@@ -33,21 +33,29 @@ npx ember-mug
 git clone https://github.com/singerbj/ember-cli.git
 cd ember-cli
 npm install
-npm run dev
+npm run dev          # Normal development mode
+npm run dev-mocked   # Mock mode for testing without hardware
+npm run dev-debug    # Debug mode with Bluetooth logging
 ```
 
 ## Features
 
-- **Temperature Control**: View current temperature and adjust target temperature
-- **Temperature Presets**: Quick-select from predefined temperature presets (Latte, Coffee, Tea)
-- **Battery Monitoring**: Real-time battery level with estimated battery life
+- **Temperature Control**: View current temperature and adjust target temperature (1°F or 0.5°C increments)
+- **Temperature Presets**: Quick-select from predefined temperature presets (Latte, Coffee, Tea) - fully customizable
+- **Battery Monitoring**: Real-time battery level with charging status and estimated battery life
 - **Dynamic Time Estimates**:
   - Estimated time to reach target temperature based on real-time heating/cooling rates
-  - Estimated battery life based on actual discharge/charge rates
-- **LED Color Control**: Customize your mug's LED color via the settings panel
-- **Temperature Unit Toggle**: Switch between Celsius and Fahrenheit
-- **Persistent Settings**: Your preferences and custom presets are saved between sessions
-- **Responsive Layout**: Adapts to narrow or wide terminals automatically
+  - Estimated battery life based on actual discharge/charge rates (heating/maintaining/charging)
+- **Liquid State Detection**: Displays mug state (Empty, Filling, Heating, Cooling, Stable Temperature)
+- **LED Color Control**: Customize your mug's LED color via full RGB color picker in settings
+- **Temperature Unit Toggle**: Switch between Celsius and Fahrenheit (default: Fahrenheit)
+- **Persistent Settings**: Your preferences (unit, LED color, custom presets, last target temperature) are saved between sessions
+- **Auto-Discovery**: Automatically scans for and connects to your Ember mug
+- **Dynamic Themes**: Terminal colors adapt based on mug state (heating=orange, cooling=blue, etc.)
+- **Responsive Layout**: Adapts to narrow (<90 chars) or wide terminals automatically
+- **Repair Guidance**: Built-in repair instructions when connection issues occur
+- **Debug Mode**: Detailed Bluetooth logging for troubleshooting
+- **Mock Mode**: Test the UI without hardware using `EMBER_MOCK=true`
 
 ## Controls
 
@@ -65,6 +73,14 @@ npm run dev
 - `o` - Open settings (LED color, unit, preset editing)
 - `q` - Quit
 
+### Debug Mode Commands (`--debug` flag)
+
+- `temp <value>` - Set target temperature directly
+- `color <hex>` - Set LED color via hex code (e.g., `color FF5500`)
+- `status` - Display detailed mug status
+- `readall` - Read all BLE characteristics
+- `help` - Show debug commands
+
 ### In Settings
 
 - `↑/↓` - Navigate settings
@@ -77,6 +93,10 @@ npm run dev
 - Node.js 18+
 - Bluetooth adapter with BLE support
 - Ember Mug 2 (other models may work but are untested)
+
+### Important Setup Note
+
+**Your Ember mug must be paired with the official Ember app first.** The mug requires write permissions to be enabled through the official app before this CLI can control temperature and LED settings. Without this initial pairing, you'll be able to read temperature and battery data but not change settings.
 
 ### Platform-Specific Notes
 
@@ -96,13 +116,45 @@ Grant Bluetooth permissions to your terminal application in System Preferences >
 
 Requires Windows 10 build 15063 or later with Bluetooth 4.0+ adapter.
 
+## Debug Mode
+
+For troubleshooting Bluetooth connectivity issues, run with the `--debug` flag:
+
+```bash
+ember-mug --debug
+```
+
+Debug mode provides:
+- Detailed Bluetooth connection logs
+- BLE characteristic read/write operations
+- Direct commands for testing (temp, color, status, readall)
+- Error diagnostics for connection failures
+
+## Mock Mode (Development/Testing)
+
+To test the UI without an Ember mug, use mock mode:
+
+```bash
+EMBER_MOCK=true ember-mug
+# or
+npm run dev-mocked
+```
+
+Mock mode simulates:
+- Temperature changes (heating/cooling dynamics)
+- Battery drain and charging
+- Liquid state changes
+- All UI features without hardware
+
 ## Technical Details
 
 This application uses:
 
-- [@abandonware/noble](https://github.com/abandonware/noble) for Bluetooth LE communication
-- [Ink](https://github.com/vadimdemedes/ink) for the React-based CLI interface
-- [Conf](https://github.com/sindresorhus/conf) for persistent settings storage
+- **TypeScript** - Type-safe development with ES2022 target
+- **React** - UI component architecture with hooks
+- **Ink** ([@inkjs](https://github.com/vadimdemedes/ink)) - React for CLIs, rendering terminal interfaces
+- **@stoprocent/noble** - Bluetooth LE communication (actively maintained fork of noble)
+- **Conf** ([sindresorhus/conf](https://github.com/sindresorhus/conf)) - Persistent settings storage
 
 The Ember mug Bluetooth protocol was reverse-engineered by [orlopau/ember-mug](https://github.com/orlopau/ember-mug).
 
@@ -113,6 +165,8 @@ Coffee mug ASCII art by [Felix Lee](https://www.ascii-art.de/ascii/c/coffee.txt)
 ## Versioning
 
 This project uses [Semantic Versioning](https://semver.org/). Releases are published to npm automatically when a new version tag is pushed to the main branch.
+
+**Note**: While the repository is named `ember-cli`, the published npm package is named `ember-mug` to avoid conflicts with the Ember.js framework CLI tool.
 
 ## License
 
