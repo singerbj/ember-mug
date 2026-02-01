@@ -24,7 +24,7 @@ export function Header({
   const { stdout } = useStdout();
   const width = stdout?.columns || 80;
 
-  const statusText = connected ? mugName : "Disconnected";
+  const statusText = connected ? `MUG NAME: ${mugName}` : "Disconnected";
 
   return (
     <Box flexDirection="column" marginBottom={1}>
@@ -40,15 +40,10 @@ export function Header({
           {mockMode && <Text color="gray"> [MOCK]</Text>}
         </Box>
         <Box>
-          <Text
-            color={
-              ledColor
-                ? rgbToHex(ledColor.r, ledColor.g, ledColor.b)
-                : theme.primary
-            }
-          >
-            ●{" "}
-          </Text>
+          {connected && ledColor && (
+            <Text color={rgbToHex(ledColor.r, ledColor.g, ledColor.b)}>● </Text>
+          )}
+
           <Text color={theme.text}>{statusText}</Text>
         </Box>
       </Box>

@@ -68,6 +68,14 @@ export function App(): React.ReactElement {
   const [selectedPresetIndex, setSelectedPresetIndex] = useState(-1);
   const [localTempUnit, setLocalTempUnit] =
     useState<TemperatureUnit>(getTemperatureUnit());
+  // Local state for desired temperature (user's intended target)
+  const [desiredTemp, setDesiredTemp] = useState<number>(mugState.targetTemp);
+  // Track if we're in the middle of setting temperature
+  const [isSettingTemp, setIsSettingTemp] = useState(false);
+  // Local state for desired LED color (user's intended color)
+  const [desiredLedColor, setDesiredLedColor] = useState<RGBColor>(mugState.color);
+  // Track if we're in the middle of setting LED color
+  const [isSettingLedColor, setIsSettingLedColor] = useState(false);
 
   // Start scanning on mount
   useEffect(() => {
@@ -95,6 +103,21 @@ export function App(): React.ReactElement {
     setSelectedPresetIndex(matchingIndex);
   }, [mugState.targetTemp, presets]);
 
+  // Sync desired temp with mug target temp ONLY when not in the middle of setting temp
+  // This prevents jumping when user is actively adjusting temperature
+  useEffect(() => {
+    if (!isSettingTemp) {
+      setDesiredTemp(mugState.targetTemp);
+    }
+  }, [mugState.targetTemp, isSettingTemp]);
+
+  // Sync desired LED color with mug LED color ONLY when not in the middle of setting color
+  useEffect(() => {
+    if (!isSettingLedColor) {
+      setDesiredLedColor(mugState.color);
+    }
+  }, [mugState.color, isSettingLedColor]);
+
   const handleTempChange = useCallback(
     async (temp: number) => {
       await setTargetTemp(temp);
@@ -102,6 +125,29 @@ export function App(): React.ReactElement {
     },
     [setTargetTemp],
   );
+
+  const handleDesiredTempChange = useCallback((temp: number) => {
+    setDesiredTemp(temp);
+  }, []);
+
+  const handleIsSettingTempChange = useCallback((isSetting: boolean) => {
+    setIsSettingTemp(isSetting);
+  }, []);
+
+  const handleColorChange = useCallback(
+    async (color: RGBColor) => {
+      await setLedColor(color);
+    },
+    [setLedColor],
+  );
+
+  const handleDesiredLedColorChange = useCallback((color: RGBColor) => {
+    setDesiredLedColor(color);
+  }, []);
+
+  const handleIsSettingLedColorChange = useCallback((isSetting: boolean) => {
+    setIsSettingLedColor(isSetting);
+  }, []);
 
   const handlePresetSelect = useCallback(
     async (preset: Preset) => {
@@ -111,13 +157,6 @@ export function App(): React.ReactElement {
       setSelectedPresetIndex(index);
     },
     [setTargetTemp, presets],
-  );
-
-  const handleColorChange = useCallback(
-    async (color: RGBColor) => {
-      await setLedColor(color);
-    },
-    [setLedColor],
   );
 
   const handleTemperatureUnitChange = useCallback(
@@ -231,15 +270,18 @@ export function App(): React.ReactElement {
           mugName={mugState.mugName}
           connected={mugState.connected}
           theme={theme}
-          ledColor={mugState.color}
+          ledColor={desiredLedColor}
         />
         <SettingsView
           presets={presets}
           temperatureUnit={localTempUnit}
           ledColor={mugState.color}
+          desiredLedColor={desiredLedColor}
           onTemperatureUnitChange={handleTemperatureUnitChange}
           onPresetUpdate={handlePresetUpdate}
           onColorChange={handleColorChange}
+          onDesiredLedColorChange={handleDesiredLedColorChange}
+          onIsSettingLedColorChange={handleIsSettingLedColorChange}
           onClose={() => setViewMode("main")}
           isActive={true}
           theme={theme}
@@ -255,7 +297,7 @@ export function App(): React.ReactElement {
         mugName={mugState.mugName}
         connected={mugState.connected}
         theme={theme}
-        ledColor={mugState.color}
+        ledColor={desiredLedColor}
       />
 
       {!mugState.connected ? (
@@ -280,6 +322,7 @@ export function App(): React.ReactElement {
                 <TemperatureDisplay
                   currentTemp={mugState.currentTemp}
                   targetTemp={mugState.targetTemp}
+                  desiredTemp={desiredTemp}
                   liquidState={mugState.liquidState}
                   temperatureUnit={localTempUnit}
                   width={panelWidth}
@@ -300,8 +343,12 @@ export function App(): React.ReactElement {
               <Box marginTop={1}>
                 <TemperatureControl
                   targetTemp={mugState.targetTemp}
+                  currentTemp={mugState.currentTemp}
+                  desiredTemp={desiredTemp}
                   temperatureUnit={localTempUnit}
                   onTempChange={handleTempChange}
+                  onDesiredTempChange={handleDesiredTempChange}
+                  onIsSettingTempChange={handleIsSettingTempChange}
                   isActive={true}
                   width={panelWidth}
                   theme={theme}
@@ -332,6 +379,7 @@ export function App(): React.ReactElement {
                     <TemperatureDisplay
                       currentTemp={mugState.currentTemp}
                       targetTemp={mugState.targetTemp}
+                      desiredTemp={desiredTemp}
                       liquidState={mugState.liquidState}
                       temperatureUnit={localTempUnit}
                       width={panelWidth}
@@ -354,8 +402,12 @@ export function App(): React.ReactElement {
                   <Box gap={1}>
                     <TemperatureControl
                       targetTemp={mugState.targetTemp}
+                      currentTemp={mugState.currentTemp}
+                      desiredTemp={desiredTemp}
                       temperatureUnit={localTempUnit}
                       onTempChange={handleTempChange}
+                      onDesiredTempChange={handleDesiredTempChange}
+                      onIsSettingTempChange={handleIsSettingTempChange}
                       isActive={true}
                       width={panelWidth}
                       height={9}

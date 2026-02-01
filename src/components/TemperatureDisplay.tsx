@@ -15,6 +15,7 @@ type TerminalTheme = (typeof TERMINAL_COLORS)[keyof typeof TERMINAL_COLORS];
 interface TemperatureDisplayProps {
   currentTemp: number;
   targetTemp: number;
+  desiredTemp?: number;
   liquidState: LiquidState;
   temperatureUnit: TemperatureUnit;
   width?: number;
@@ -26,6 +27,7 @@ interface TemperatureDisplayProps {
 export function TemperatureDisplay({
   currentTemp,
   targetTemp,
+  desiredTemp,
   liquidState,
   temperatureUnit,
   width,
@@ -34,6 +36,8 @@ export function TemperatureDisplay({
   tempRate,
 }: TemperatureDisplayProps): React.ReactElement {
   const isEmpty = liquidState === LiquidState.Empty;
+  // Use desiredTemp for display if provided, otherwise fall back to targetTemp
+  const displayTargetTemp = desiredTemp ?? targetTemp;
 
   const timeToTarget = estimateTimeToTargetTemp(
     currentTemp,
@@ -86,7 +90,7 @@ export function TemperatureDisplay({
           </Box>
           <Box>
             <Text bold color={theme.text}>
-              {formatTemperature(targetTemp, temperatureUnit)}
+              {formatTemperature(displayTargetTemp, temperatureUnit)}
             </Text>
           </Box>
         </Box>
