@@ -1,7 +1,7 @@
 # Ember Mug CLI
 
 [![npm version](https://badge.fury.io/js/ember-mug.svg)](https://www.npmjs.com/package/ember-mug)
-[![CI](https://github.com/singerbj/ember-cli/actions/workflows/ci.yml/badge.svg)](https://github.com/singerbj/ember-cli/actions/workflows/ci.yml)
+[![CI](https://github.com/singerbj/ember-mug/actions/workflows/ci.yml/badge.svg)](https://github.com/singerbj/ember-mug/actions/workflows/ci.yml)
 
 ![Screenshot](images/screenshot.png)
 
@@ -30,8 +30,8 @@ npx ember-mug
 ### Local Development
 
 ```bash
-git clone https://github.com/singerbj/ember-cli.git
-cd ember-cli
+git clone https://github.com/singerbj/ember-mug.git
+cd ember-mug
 npm install
 npm run dev          # Normal development mode
 npm run dev-mocked   # Mock mode for testing without hardware
@@ -125,6 +125,7 @@ ember-mug --debug
 ```
 
 Debug mode provides:
+
 - Detailed Bluetooth connection logs
 - BLE characteristic read/write operations
 - Direct commands for testing (temp, color, status, readall)
@@ -141,6 +142,7 @@ npm run dev-mocked
 ```
 
 Mock mode simulates:
+
 - Temperature changes (heating/cooling dynamics)
 - Battery drain and charging
 - Liquid state changes
@@ -165,8 +167,6 @@ Coffee mug ASCII art by [Felix Lee](https://www.ascii-art.de/ascii/c/coffee.txt)
 ## Versioning
 
 This project uses [Semantic Versioning](https://semver.org/). Releases are published to npm automatically when a new version tag is pushed to the main branch.
-
-**Note**: While the repository is named `ember-cli`, the published npm package is named `ember-mug` to avoid conflicts with the Ember.js framework CLI tool.
 
 ## License
 
