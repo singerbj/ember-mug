@@ -5,7 +5,12 @@ import {
   MIN_TEMP_CELSIUS,
   MAX_TEMP_CELSIUS,
 } from "../lib/types.js";
-import { formatTemperature, clampTemperature } from "../lib/utils.js";
+import {
+  formatTemperature,
+  clampTemperature,
+  celsiusToFahrenheit,
+  fahrenheitToCelsius,
+} from "../lib/utils.js";
 import { Panel } from "./Panel.js";
 import { TERMINAL_COLORS } from "../lib/theme.js";
 
@@ -34,17 +39,30 @@ export function TemperatureControl({
     (input, key) => {
       if (!isActive) return;
 
-      let delta = 0;
+      const isFahrenheit = temperatureUnit === TemperatureUnit.Fahrenheit;
+      const step = isFahrenheit ? 1 : 0.5;
 
+      // Convert current temp to display unit, round to nearest step, apply delta, convert back
+      let currentDisplayTemp = isFahrenheit
+        ? celsiusToFahrenheit(targetTemp)
+        : targetTemp;
+
+      // Round to nearest step increment
+      currentDisplayTemp = Math.round(currentDisplayTemp / step) * step;
+
+      let delta = 0;
       if (key.leftArrow) {
-        delta = -0.5;
+        delta = -step;
       } else if (key.rightArrow) {
-        delta = 0.5;
+        delta = step;
       }
 
       if (delta !== 0) {
-        const newTemp = clampTemperature(targetTemp + delta);
-        onTempChange(newTemp);
+        const newDisplayTemp = currentDisplayTemp + delta;
+        const newTemp = isFahrenheit
+          ? fahrenheitToCelsius(newDisplayTemp)
+          : newDisplayTemp;
+        onTempChange(clampTemperature(newTemp));
       }
     },
     { isActive },

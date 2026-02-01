@@ -58,7 +58,8 @@ export function ConnectionStatus({
               <>
                 <Box marginTop={1} flexDirection="column" alignItems="center">
                   <Text color={theme.dimText}>
-                    Your Ember mug needs to be set up with the official app first.
+                    Your Ember mug needs to be set up with the official app
+                    first.
                   </Text>
                 </Box>
                 <Box marginTop={1} flexDirection="column" alignItems="center">
@@ -113,12 +114,6 @@ export function ConnectionStatus({
                   <Spinner type="dots" />
                 </Text>
                 <Text color={theme.text}> Connecting...</Text>
-              </Box>
-            )}
-            {foundMugName && (
-              <Box marginTop={1} flexDirection="column" alignItems="center">
-                <Text color={theme.dimText}>If light flashing blue:</Text>
-                <Text color={theme.dimText}>• Tap mug button to exit pairing</Text>
               </Box>
             )}
           </Box>
