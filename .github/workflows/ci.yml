@@ -29,11 +29,17 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
-      - name: Build
+      - name: Build all packages
         run: npm run build
 
-      - name: Verify build output
+      - name: Verify CLI build output
         run: |
-          test -f dist/cli.js || (echo "dist/cli.js not found" && exit 1)
-          test -f dist/index.js || (echo "dist/index.js not found" && exit 1)
-          echo "Build output verified successfully"
+          test -f apps/cli/dist/cli.js || (echo "apps/cli/dist/cli.js not found" && exit 1)
+          test -f apps/cli/dist/index.js || (echo "apps/cli/dist/index.js not found" && exit 1)
+          echo "CLI build output verified successfully"
+
+      - name: Verify Web build output
+        run: |
+          test -d apps/web/dist || (echo "apps/web/dist not found" && exit 1)
+          test -f apps/web/dist/index.html || (echo "apps/web/dist/index.html not found" && exit 1)
+          echo "Web build output verified successfully"

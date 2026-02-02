@@ -25,6 +25,9 @@ Thumbs.db
 # TypeScript
 *.tsbuildinfo
 
+# Turbo
+.turbo/
+
 # Test coverage
 coverage/
 

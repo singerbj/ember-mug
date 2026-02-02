@@ -4,6 +4,10 @@ on:
   push:
     branches:
       - main
+    paths:
+      - 'apps/cli/**'
+      - 'apps/cli/package.json'
+      - 'package.json'
 
 jobs:
   calculate-version:
