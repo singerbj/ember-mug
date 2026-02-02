@@ -36,131 +36,14 @@ export default function Terminal() {
           </div>
 
           <div className="terminal-body">
-            <TerminalContent />
+            <img
+              src="/screenshot.png"
+              alt="Ember Mug CLI interface showing temperature controls, battery status, and temperature presets"
+              className="terminal-screenshot"
+            />
           </div>
         </motion.div>
       </div>
     </section>
-  )
-}
-
-function TerminalContent() {
-  return (
-    <div className="cli-interface">
-      {/* Header */}
-      <div className="cli-header">
-        <span className="cli-logo">C[_]</span>
-        <span className="cli-title">EMBER MUG</span>
-        <span className="cli-status">
-          <span className="status-dot" />
-          EMBER
-        </span>
-      </div>
-
-      <div className="cli-divider" />
-
-      <div className="cli-main">
-        {/* ASCII Mug */}
-        <div className="cli-mug">
-          <pre className="ascii-art">{`      |   |
-       \\   /
-        (   )
-         { }
-    {    }-{    }
-  .-{      }     }-.
- |'-..______..-'|
-   \\'-..__..-'/
-     (     \\\\
-     |   )  )
-     )  /
-    (   /
-    \\\\      y'
- \\'-..__..-'`}</pre>
-        </div>
-
-        {/* Panels */}
-        <div className="cli-panels">
-          {/* Temperature Panel */}
-          <div className="cli-panel">
-            <div className="panel-header">Temperature</div>
-            <div className="panel-content temp-content">
-              <div className="temp-display">
-                <div className="temp-item">
-                  <span className="temp-label">Current</span>
-                  <span className="temp-value">133°F</span>
-                </div>
-                <span className="temp-arrow">&rarr;</span>
-                <div className="temp-item">
-                  <span className="temp-label">Target</span>
-                  <span className="temp-value target">133°F</span>
-                </div>
-              </div>
-              <div className="temp-status">At temp</div>
-            </div>
-          </div>
-
-          {/* Battery Panel */}
-          <div className="cli-panel">
-            <div className="panel-header">Battery</div>
-            <div className="panel-content battery-content">
-              <span className="battery-percent">52%</span>
-              <div className="battery-bar">
-                <div className="battery-fill" style={{ width: '52%' }} />
-              </div>
-              <span className="battery-time">[~] 1h 44m remaining</span>
-            </div>
-          </div>
-
-          {/* Temperature Adjust */}
-          <div className="cli-panel">
-            <div className="panel-header">Temperature Adjust</div>
-            <div className="panel-content adjust-content">
-              <div className="slider-display">
-                <span>122°F</span>
-                <div className="slider-track">
-                  <div className="slider-fill" style={{ width: '50%' }} />
-                  <div className="slider-thumb" style={{ left: '50%' }} />
-                </div>
-                <span>145°F</span>
-              </div>
-              <span className="slider-hint">&larr;/&rarr;</span>
-            </div>
-          </div>
-
-          {/* Presets */}
-          <div className="cli-panel">
-            <div className="panel-header">Temperature Presets</div>
-            <div className="panel-content presets-content">
-              <div className="preset">
-                <span className="preset-name">Latte</span>
-                <span className="preset-temp">126°F</span>
-                <span className="preset-key">[1]</span>
-              </div>
-              <div className="preset">
-                <span className="preset-name">Coffee</span>
-                <span className="preset-temp">132°F</span>
-                <span className="preset-key">[2]</span>
-              </div>
-              <div className="preset">
-                <span className="preset-name">Tea</span>
-                <span className="preset-temp">140°F</span>
-                <span className="preset-key">[3]</span>
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      <div className="cli-divider" />
-
-      {/* Footer */}
-      <div className="cli-footer">
-        <span><b>[1-3]</b> presets</span>
-        <span><b>[u]</b> unit</span>
-        <span><b>[r]</b> repair</span>
-        <span><b>[o]</b> settings</span>
-        <span><b>[q]</b> quit</span>
-      </div>
-    </div>
   )
 }

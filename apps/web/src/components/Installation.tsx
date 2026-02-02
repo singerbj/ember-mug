@@ -5,20 +5,14 @@ import './Installation.css'
 const installSteps = [
   {
     step: '01',
-    title: 'Install the CLI',
-    command: 'npm install -g ember-mug',
-    description: 'Install ember-mug globally via npm to make it available from anywhere.',
-  },
-  {
-    step: '02',
     title: 'Enable Bluetooth',
     command: null,
     description: 'Make sure Bluetooth is enabled on your device and your Ember mug is powered on.',
   },
   {
-    step: '03',
+    step: '02',
     title: 'Run the CLI',
-    command: 'ember-mug',
+    command: 'npx ember-mug@latest',
     description: 'Launch the CLI and it will automatically discover and connect to your mug.',
   },
 ]
@@ -37,7 +31,7 @@ export default function Installation() {
           transition={{ duration: 0.6 }}
         >
           <h2>Get Started in Seconds</h2>
-          <p>Three simple steps to start controlling your Ember mug from the terminal.</p>
+          <p>Two simple steps to start controlling your Ember mug from the terminal.</p>
         </motion.div>
 
         <div className="steps-container">
