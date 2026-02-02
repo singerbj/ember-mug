@@ -123,9 +123,9 @@ export default function Hero() {
           transition={{ duration: 0.6, delay: 0.9 }}
         >
           <code className="install-command">
-            <span className="prompt">$</span> npm install -g ember-mug
+            <span className="prompt">$</span> npx ember-mug@latest
           </code>
-          <button className="copy-btn" onClick={() => navigator.clipboard.writeText('npm install -g ember-mug')}>
+          <button className="copy-btn" onClick={() => navigator.clipboard.writeText('npx ember-mug@latest')}>
             <CopyIcon />
           </button>
         </motion.div>
