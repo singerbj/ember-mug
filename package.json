@@ -5,6 +5,13 @@
     "type": "git",
     "url": "https://github.com/singerbj/ember-mug"
   },
+  "bin": {
+    "ember-mug": "apps/cli/dist/cli.js"
+  },
+  "files": [
+    "apps/cli/dist",
+    "apps/cli/package.json"
+  ],
   "workspaces": [
     "apps/*"
   ],
@@ -12,7 +19,8 @@
     "build": "turbo run build",
     "dev": "turbo run dev",
     "lint": "turbo run lint",
-    "clean": "turbo run clean"
+    "clean": "turbo run clean",
+    "prepublishOnly": "npm run build"
   },
   "devDependencies": {
     "turbo": "^2.3.0"
