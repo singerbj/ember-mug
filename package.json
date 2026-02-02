@@ -1,6 +1,10 @@
 {
   "name": "ember-mug",
   "version": "1.1.3",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/singerbj/ember-mug"
+  },
   "workspaces": [
     "apps/*"
   ],
