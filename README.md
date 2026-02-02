@@ -24,7 +24,7 @@ ember-mug
 ### Run with npx (No Installation)
 
 ```bash
-npx ember-mug
+npx ember-mug@latest
 ```
 
 ### Local Development
