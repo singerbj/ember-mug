@@ -27,7 +27,7 @@ export const THEMES = {
   stable: {
     primary: '#F5C542',  // Yellow
     secondary: '#F7D979',
-    text: 'black',
+    text: 'white',
     dimText: '#666666',
     name: 'At temp',
   },
@@ -74,7 +74,7 @@ export const TERMINAL_COLORS = {
     primary: 'yellow',
     secondary: 'yellowBright',
     border: 'yellow',
-    text: 'black',
+    text: 'white',
     dimText: 'gray',
   },
   empty: {
