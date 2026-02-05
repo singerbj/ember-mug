@@ -136,11 +136,29 @@
   transform: translateY(-2px);
 }
 
+.hero-producthunt {
+  margin-top: 1.5rem;
+}
+
+.hero-producthunt a {
+  display: block;
+  transition: transform 0.2s ease, opacity 0.2s ease;
+}
+
+.hero-producthunt a:hover {
+  transform: translateY(-2px);
+  opacity: 0.9;
+}
+
+.hero-producthunt img {
+  display: block;
+}
+
 .hero-install {
   display: flex;
   align-items: center;
   gap: 0.5rem;
-  margin-top: 2rem;
+  margin-top: 1.5rem;
   padding: 0.75rem 1rem;
   background: var(--bg-secondary);
   border: 1px solid var(--border);

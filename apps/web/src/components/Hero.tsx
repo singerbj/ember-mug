@@ -117,10 +117,30 @@ export default function Hero() {
         </motion.div>
 
         <motion.div
+          className="hero-producthunt"
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.6, delay: 0.8 }}
+        >
+          <a
+            href="https://www.producthunt.com/products/ember-mug-cli?embed=true&utm_source=badge-featured&utm_medium=badge&utm_campaign=badge-ember-mug-cli"
+            target="_blank"
+            rel="noopener noreferrer"
+          >
+            <img
+              src="https://api.producthunt.com/widgets/embed-image/v1/featured.svg?post_id=1072278&theme=light&t=1770301556157"
+              alt="Ember Mug CLI - Control your ember mug from the terminal | Product Hunt"
+              width="250"
+              height="54"
+            />
+          </a>
+        </motion.div>
+
+        <motion.div
           className="hero-install"
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
-          transition={{ duration: 0.6, delay: 0.9 }}
+          transition={{ duration: 0.6, delay: 1.0 }}
         >
           <code className="install-command">
             <span className="prompt">$</span> npx ember-mug@latest
